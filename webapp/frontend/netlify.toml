@@ -1,0 +1,27 @@
+# Netlify — Attack Flow UI (static) + proxied /api to your FastAPI backend
+#
+# Before deploy:
+# 1. Replace BACKEND_URL below with your live API origin (no trailing slash), e.g. https://api-xyz.fly.dev
+# 2. On the API server, set FRONTEND_URL to your Netlify site (e.g. https://your-app.netlify.app) for CORS
+#
+# Docs: https://docs.netlify.com/routing/redirects/rewrites-proxies/
+
+[build]
+  command = "npm run build"
+  publish = "dist"
+
+[build.environment]
+  NODE_VERSION = "20"
+
+# Proxy browser calls to /api/* → your FastAPI host (same paths as local Vite proxy)
+[[redirects]]
+  from = "/api/*"
+  to = "https://REPLACE-WITH-YOUR-API.example.com/api/:splat"
+  status = 200
+  force = true
+
+# SPA: serve index.html for client routes (static assets are matched first by Netlify)
+[[redirects]]
+  from = "/*"
+  to = "/index.html"
+  status = 200

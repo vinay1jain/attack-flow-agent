@@ -1,0 +1,17 @@
+{
+  "id": "report--test-001",
+  "type": "report",
+  "spec_version": "2.1",
+  "name": "APT29 Phishing Campaign Analysis",
+  "description": "APT29 conducted a spear-phishing campaign targeting government agencies. The attackers used malicious Word documents with embedded macros to deliver Cobalt Strike beacons.",
+  "published": "2026-03-15T00:00:00Z",
+  "created": "2026-03-15T00:00:00Z",
+  "modified": "2026-03-15T00:00:00Z",
+  "report_types": ["threat-report"],
+  "object_marking_refs": ["marking-definition--34098fce-860f-48ae-8e50-ebd3cc5e41da"],
+  "object_refs": [
+    "threat-actor--ta-001",
+    "malware--mal-001",
+    "attack-pattern--ap-001"
+  ]
+}

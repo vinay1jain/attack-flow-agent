@@ -1,0 +1,44 @@
+{
+  "type": "bundle",
+  "id": "bundle--test-001",
+  "spec_version": "2.1",
+  "objects": [
+    {
+      "type": "attack-action",
+      "id": "attack-action--aa-001",
+      "name": "Spearphishing Attachment",
+      "description": "Attacker sends phishing email with malicious document",
+      "technique_id": "T1566.001",
+      "tactic_id": "TA0001"
+    },
+    {
+      "type": "attack-action",
+      "id": "attack-action--aa-002",
+      "name": "PowerShell Execution",
+      "description": "Macro executes PowerShell to download payload",
+      "technique_id": "T1059.001",
+      "tactic_id": "TA0002"
+    },
+    {
+      "type": "malware",
+      "id": "malware--mal-001",
+      "name": "Cobalt Strike",
+      "description": "C2 beacon deployed on victim machine",
+      "malware_types": ["backdoor"]
+    },
+    {
+      "type": "relationship",
+      "id": "relationship--rel-001",
+      "source_ref": "attack-action--aa-001",
+      "target_ref": "attack-action--aa-002",
+      "relationship_type": "leads-to"
+    },
+    {
+      "type": "relationship",
+      "id": "relationship--rel-002",
+      "source_ref": "attack-action--aa-002",
+      "target_ref": "malware--mal-001",
+      "relationship_type": "uses"
+    }
+  ]
+}

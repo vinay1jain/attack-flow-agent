@@ -1,0 +1,13 @@
+# Copy to terraform.tfvars and fill in your values
+aws_region             = "us-east-1"
+environment            = "dev"
+vpc_id                 = "vpc-xxxxxxxxx"
+private_subnet_ids     = ["subnet-aaaa", "subnet-bbbb"]
+public_subnet_ids      = ["subnet-cccc", "subnet-dddd"]
+ctix_security_group_id = "sg-xxxxxxxxx"
+ctix_internal_url      = "http://10.0.1.50:8080"
+agent_image_tag        = "latest"
+agent_cpu              = 1024
+agent_memory           = 2048
+desired_count          = 1
+llm_model              = "openai/gpt-4o"

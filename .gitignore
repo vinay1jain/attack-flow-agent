@@ -1,0 +1,48 @@
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+*.egg-info/
+dist/
+build/
+.eggs/
+venv/
+.venv/
+
+# Environment — never commit API keys; operators use .env locally or host secret stores.
+.env
+**/.env
+*.env.local
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Local scratch / downloaded samples (keep out of git)
+/Untitled document.txt
+/aa25-343a-pro-russia-hacktivists-conduct-attacks_0.pdf
+
+# Node
+node_modules/
+frontend/dist/
+webapp/frontend/dist/
+
+# Docker
+*.log
+
+# Test
+.pytest_cache/
+.coverage
+htmlcov/
+
+# Terraform
+infra/terraform/.terraform/
+infra/terraform/*.tfstate*
+infra/terraform/.terraform.lock.hcl
