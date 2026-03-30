@@ -133,9 +133,24 @@ Environment variables are documented in [agent/.env.example](agent/.env.example)
 
 ## Publishing on GitHub
 
-- Confirm **no** `.env`, `*.tfvars` with secrets, or real API keys are tracked (`git log -p -- '*.env'` before the first push).
-- Keep **[`agent/.env.example`](agent/.env.example)** and **[`webapp/backend/.env.example`](webapp/backend/.env.example)** as the only env templates (empty keys, comments only).
-- Tag a release (e.g. `v1.0.0`) when the webapp is the “v1” you want others to clone and run.
+The project is meant to ship **without secrets**: only `*.env.example` files, never committed `.env` or real API keys. Before the first push, skim `git status` and avoid adding `*.tfvars` with real values.
+
+**First push (after `git` is initialized in this folder):**
+
+1. On GitHub: **New repository** → choose a name (e.g. `ctix-attack-flow-agent`). Do **not** add a README, `.gitignore`, or license if this tree already contains them.
+2. Add the remote and push `main` and the **`v1.0.0`** tag:
+
+```bash
+cd /path/to/ctix-attack-flow-agent
+git remote add origin https://github.com/<YOUR_USER_OR_ORG>/<REPO_NAME>.git
+git branch -M main
+git push -u origin main
+git push origin v1.0.0
+```
+
+Use SSH instead if you prefer: `git@github.com:<YOUR_USER_OR_ORG>/<REPO_NAME>.git`. GitHub will prompt for sign-in (browser, PAT, or SSH key) depending on your setup.
+
+On GitHub, **Releases → Draft a new release** from tag `v1.0.0` if you want release notes for others trying the webapp.
 
 ## License
 
