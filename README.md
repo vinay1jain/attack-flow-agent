@@ -182,7 +182,3 @@ Variable meanings are documented in comments inside each `*.env.example` file.
 Releases are tagged (e.g. **`v1.0.0`**). Use **GitHub Releases** for changelog-style notes if you want discoverability for each tag.
 
 ---
-
-## License
-
-Proprietary — Cyware Technologies.
