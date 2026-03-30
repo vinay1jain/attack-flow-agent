@@ -46,7 +46,7 @@ export default function ExportBar({ data }: Props) {
   const handleExportFlowJson = () => {
     setAnchor(null);
     const payload = {
-      format: 'ctix-attack-flow',
+      format: 'attack-flow-agent',
       version: 1,
       nodes: data.nodes,
       edges: data.edges,

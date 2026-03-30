@@ -26,7 +26,7 @@ Do **not** add a trailing slash on the host. The `:splat` passes through the pat
 
 ## 3. Netlify site settings
 
-- **Base directory:** `webapp/frontend` (if the repo root is the monorepo / `ctix-attack-flow-agent`)
+- **Base directory:** `webapp/frontend` (if the repo root is the monorepo / `attack-flow-agent`)
 - **Build command:** `npm run build` (already in `netlify.toml`)
 - **Publish directory:** `webapp/frontend/dist` (or `dist` if base directory is `webapp/frontend`)
 

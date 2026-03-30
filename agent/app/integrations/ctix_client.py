@@ -1,4 +1,4 @@
-"""HMAC-authenticated async client for the CTIX v3 API."""
+"""HMAC-authenticated async client for the configured upstream threat-intel API."""
 
 from __future__ import annotations
 
@@ -18,7 +18,7 @@ logger = structlog.get_logger(__name__)
 
 
 def _generate_hmac_signature(access_id: str, secret_key: str) -> tuple[int, str]:
-    """Generate HMAC-SHA1 signature for CTIX API authentication.
+    """Generate HMAC-SHA1 signature for upstream API authentication.
 
     Mirrors the Cyware CFTR auth contract: sign ``"{access_id}\\n{expires}"``
     with the secret key and Base64-encode the digest.
@@ -36,7 +36,7 @@ def _generate_hmac_signature(access_id: str, secret_key: str) -> tuple[int, str]
 
 
 class CTIXClient:
-    """Async HTTP client for CTIX threat-data and ingestion APIs."""
+    """Async HTTP client for threat-data and ingestion APIs (see settings / env)."""
 
     def __init__(self) -> None:
         settings = get_settings()
@@ -142,7 +142,7 @@ class CTIXClient:
         *,
         tenant_id: str | None = None,
     ) -> dict[str, Any]:
-        """Notify CTIX that attack flow generation is complete."""
+        """Notify the upstream platform that attack flow generation is complete."""
         logger.info("ctix.notify_completion", report_id=report_id, tenant_id=tenant_id)
         return await self._request(
             "POST",
@@ -154,7 +154,7 @@ class CTIXClient:
     # ── Health check ──────────────────────────────────────────────────
 
     async def health_check(self) -> bool:
-        """Return True if CTIX API is reachable."""
+        """Return True if the upstream API is reachable."""
         try:
             async with self._client() as client:
                 resp = await client.get("/health/", params=self._auth_params())

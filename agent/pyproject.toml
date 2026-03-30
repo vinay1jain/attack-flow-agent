@@ -3,9 +3,9 @@ requires = ["setuptools>=68.0", "wheel"]
 build-backend = "setuptools.backends._legacy:_Backend"
 
 [project]
-name = "ctix-attack-flow-agent"
+name = "attack-flow-agent"
 version = "1.0.0"
-description = "AI-powered attack flow generation agent for CTIX"
+description = "AI-powered attack flow generation from threat intelligence reports"
 requires-python = ">=3.11"
 dependencies = [
     "fastapi>=0.115.0",

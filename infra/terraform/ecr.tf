@@ -1,5 +1,5 @@
 resource "aws_ecr_repository" "agent" {
-  name                 = "ctix-attack-flow-agent"
+  name                 = "attack-flow-agent"
   image_tag_mutability = "MUTABLE"
 
   image_scanning_configuration {

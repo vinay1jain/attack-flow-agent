@@ -18,7 +18,7 @@ class ErrorCode(str, Enum):
 
 
 ERROR_MESSAGES: dict[ErrorCode, str] = {
-    ErrorCode.REPORT_NOT_FOUND: "The specified report was not found in CTIX.",
+    ErrorCode.REPORT_NOT_FOUND: "The specified report was not found in the upstream platform.",
     ErrorCode.REPORT_CONTENT_INSUFFICIENT: (
         "This report does not contain enough structured data to generate a meaningful attack flow. "
         "Ensure the report has at least {min_sdos} related objects (indicators, malware, attack patterns, etc.)."

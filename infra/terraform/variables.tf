@@ -11,7 +11,7 @@ variable "environment" {
 }
 
 variable "vpc_id" {
-  description = "VPC ID where CTIX EC2 instances run"
+  description = "VPC ID where application EC2 instances run"
   type        = string
 }
 
@@ -26,12 +26,12 @@ variable "public_subnet_ids" {
 }
 
 variable "ctix_security_group_id" {
-  description = "Security group ID of CTIX EC2 instances (for ingress rules)"
+  description = "Security group ID of application EC2 instances (for ingress rules)"
   type        = string
 }
 
 variable "ctix_internal_url" {
-  description = "Internal URL of the CTIX API (e.g., http://10.0.1.50:8080)"
+  description = "Internal URL of the upstream threat-intel API (e.g., http://10.0.1.50:8080)"
   type        = string
 }
 

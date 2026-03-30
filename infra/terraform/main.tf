@@ -21,7 +21,7 @@ provider "aws" {
 
   default_tags {
     tags = {
-      Project     = "ctix-attack-flow-agent"
+      Project     = "attack-flow-agent"
       Environment = var.environment
       ManagedBy   = "terraform"
     }

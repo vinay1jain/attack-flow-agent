@@ -1,8 +1,8 @@
-# CTIX Attack Flow Agent — Product Story
+# Attack Flow Agent — Product Story
 
 | Field | Value |
 |-------|-------|
-| **Product** | Cyware Threat Intelligence eXchange (CTIX) |
+| **Product** | Threat intelligence platform integration |
 | **Feature** | AI-Powered Attack Flow Generation & Visualization |
 | **Date** | 2026-03-26 |
 | **Version** | 1.0 |
@@ -17,7 +17,7 @@ Security analysts at enterprise SOCs receive dozens of threat intelligence repor
 
 Today, translating a report into an **actionable, ordered attack narrative** is entirely manual. An analyst reads a 15-page report, mentally maps the sequence of techniques, cross-references MITRE ATT&CK, and tries to communicate the attack chain to their team. This takes **30–60 minutes per report** and the result is usually a bullet list in a wiki page or a slide deck that's outdated within a week.
 
-Meanwhile, the structured data that CTIX already has — indicators, malware objects, attack patterns, threat actors, relationships — sits in the platform as individual objects. There is no way to see **how they connect into a coherent attack story**. The relationships exist, but the sequence, the causality, the "this happens, then that happens, which enables this" — that narrative is locked inside the analyst's head.
+Meanwhile, the structured data the platform already has — indicators, malware objects, attack patterns, threat actors, relationships — sits there as individual objects. There is no way to see **how they connect into a coherent attack story**. The relationships exist, but the sequence, the causality, the "this happens, then that happens, which enables this" — that narrative is locked inside the analyst's head.
 
 The result:
 - **Detection engineers** don't know which techniques to prioritize because they can't see the flow.
@@ -28,11 +28,11 @@ The result:
 
 ## The Vision
 
-**Every threat intelligence report in CTIX automatically generates an interactive, MITRE-compliant attack flow graph that analysts can explore, share, and use to drive defensive action.**
+**Every threat intelligence report in the platform automatically generates an interactive, MITRE-compliant attack flow graph that analysts can explore, share, and use to drive defensive action.**
 
 A single click on a report produces a visual map: Initial Access via spear phishing leads to execution via PowerShell, which drops Cobalt Strike for C2, which enables lateral movement via RDP, culminating in data exfiltration over DNS tunneling. Each node is linked to ATT&CK techniques, grounded in evidence from the report, and exportable as STIX 2.1 or MITRE Attack Flow Builder format.
 
-This transforms CTIX from a threat intel **aggregation platform** into a threat intel **understanding platform**.
+This transforms the platform from a threat intel **aggregation platform** into a threat intel **understanding platform**.
 
 ---
 
@@ -67,7 +67,7 @@ Priya runs the incident response team. When a breach is detected, she needs to u
 
 ### Arjun — Platform Admin
 
-Arjun manages the CTIX deployment. He's cautious because:
+Arjun manages the platform deployment. He's cautious because:
 - LLM-powered features have cost implications (token usage per generation).
 - TLP:RED reports must never be sent to external AI services.
 - He needs audit trails for everything the system generates.
@@ -80,11 +80,11 @@ Arjun manages the CTIX deployment. He's cautious because:
 
 ### Epic 1: Attack Flow Generation (Backend Agent)
 
-> *As a CTI analyst, I want CTIX to automatically generate a structured attack flow from any threat intelligence report, so that I don't have to manually extract and sequence TTPs.*
+> *As a CTI analyst, I want the platform to automatically generate a structured attack flow from any threat intelligence report, so that I don't have to manually extract and sequence TTPs.*
 
 #### Story 1.1: Generate Attack Flow from Report (On-Demand)
 
-**As** a CTIX user viewing a report detail page,
+**As** a the platform user viewing a report detail page,
 **I want** to click a "Generate Attack Flow" button,
 **So that** the system produces an interactive attack flow graph for that report.
 
@@ -96,10 +96,10 @@ Arjun manages the CTIX deployment. He's cautious because:
 - [ ] If the report has insufficient content for a meaningful flow, the system shows an actionable message explaining why.
 - [ ] Generation works for reports with and without a `description` field (narrative assembly handles both cases).
 
-#### Story 1.2: Narrative Assembly from CTIX Report Objects
+#### Story 1.2: Narrative Assembly from the platform Report Objects
 
 **As** the attack flow agent,
-**I need** to assemble a coherent text narrative from a CTIX report's structured data (name, description, related SDOs),
+**I need** to assemble a coherent text narrative from a the platform report's structured data (name, description, related SDOs),
 **So that** the `ttp_chainer` pipeline receives quality input even when reports lack a prose description.
 
 **Acceptance Criteria:**
@@ -151,11 +151,11 @@ Arjun manages the CTIX deployment. He's cautious because:
 
 ### Epic 2: Attack Flow Visualization (Frontend)
 
-> *As a CTI analyst, I want to see the attack flow as an interactive graph inside the CTIX UI, so that I can explore the attack chain visually without leaving the platform.*
+> *As a CTI analyst, I want to see the attack flow as an interactive graph inside the platform UI, so that I can explore the attack chain visually without leaving the platform.*
 
 #### Story 2.1: Attack Flow Tab on Report Detail Page
 
-**As** a CTIX user,
+**As** a the platform user,
 **I want** an "Attack Flow" tab on the report detail page,
 **So that** I can view the generated flow alongside the report's other data (IOCs, related objects, history).
 
@@ -178,7 +178,7 @@ Arjun manages the CTIX deployment. He's cautious because:
 - [ ] Edges show relationship labels (e.g., "leads-to", "uses", "exploits").
 - [ ] Panning and zooming are smooth; a "Fit View" button resets to show the full graph.
 - [ ] Minimap is available for large flows.
-- [ ] The graph supports both light and dark themes (matching CTIX's theme setting).
+- [ ] The graph supports both light and dark themes (matching the platform's theme setting).
 
 #### Story 2.3: Node Detail Panel
 
@@ -209,39 +209,39 @@ Arjun manages the CTIX deployment. He's cautious because:
 
 ---
 
-### Epic 3: CTIX Platform Integration
+### Epic 3: the platform Platform Integration
 
-> *As the CTIX platform, I need the attack flow agent to integrate seamlessly with existing infrastructure — authentication, storage, event bus, and multi-tenancy.*
+> *As the platform, I need the attack flow agent to integrate seamlessly with existing infrastructure — authentication, storage, event bus, and multi-tenancy.*
 
-#### Story 3.1: CTIX Backend Proxy Layer
+#### Story 3.1: the platform Backend Proxy Layer
 
-**As** the CTIX platform,
-**I need** a thin proxy in the CTIX backend that routes attack flow requests to the agent service,
-**So that** the agent is never exposed directly to the internet and all requests go through CTIX auth.
+**As** the platform,
+**I need** a thin proxy in the platform backend that routes attack flow requests to the agent service,
+**So that** the agent is never exposed directly to the internet and all requests go through the platform auth.
 
 **Acceptance Criteria:**
-- [ ] CTIX backend exposes: `POST /ctixapi/attack-flow/generate`, `GET /ctixapi/attack-flow/jobs/{id}`, `GET /ctixapi/attack-flow/report/{id}`, `GET /ctixapi/attack-flow/{id}/export/{format}`.
-- [ ] All endpoints validate the user's HMAC signature (same auth as existing CTIX APIs).
+- [ ] the platform backend exposes: `POST /api/attack-flow/generate`, `GET /api/attack-flow/jobs/{id}`, `GET /api/attack-flow/report/{id}`, `GET /api/attack-flow/{id}/export/{format}`.
+- [ ] All endpoints validate the user's HMAC signature (same auth as existing the platform APIs).
 - [ ] Requests are forwarded to the agent service over the internal network (no external exposure).
 - [ ] RBAC: only users with read permission on the report can trigger generation or view its flow.
 - [ ] Rate limiting: configurable per-tenant limit (default: 20 generations/hour).
 
-#### Story 3.2: Agent ↔ CTIX Data Exchange
+#### Story 3.2: Agent ↔ the platform Data Exchange
 
 **As** the attack flow agent,
-**I need** to fetch report data from CTIX and store results back,
-**So that** attack flows are first-class objects in the CTIX data model.
+**I need** to fetch report data from the platform and store results back,
+**So that** attack flows are first-class objects in the platform data model.
 
 **Acceptance Criteria:**
 - [ ] Agent fetches report details via `GET /ingestion/threat-data/report/{id}/basic/`.
 - [ ] Agent fetches related SDOs via `GET /ingestion/threat-data/report/{id}/relations/`.
 - [ ] Agent stores generated STIX objects via `POST /ingestion/ingestion-api/ingest_bundle/` with a dedicated source and collection.
-- [ ] Agent notifies CTIX of completion via callback URL, passing `react_flow_data` for frontend rendering.
+- [ ] Agent notifies the platform of completion via callback URL, passing `react_flow_data` for frontend rendering.
 - [ ] The generated attack flow is linked to the source report via a STIX `relationship` (type: `derived-from`).
 
 #### Story 3.3: Event-Driven Generation
 
-**As** a CTIX admin,
+**As** a the platform admin,
 **I want** to optionally auto-generate attack flows when reports are published or updated,
 **So that** flows stay current without manual intervention.
 
@@ -258,7 +258,7 @@ Arjun manages the CTIX deployment. He's cautious because:
 **So that** one tenant's reports, flows, and LLM calls never leak to another.
 
 **Acceptance Criteria:**
-- [ ] Every agent request includes `tenant_id`; all CTIX API calls are scoped to that tenant.
+- [ ] Every agent request includes `tenant_id`; all the platform API calls are scoped to that tenant.
 - [ ] LLM prompts include no cross-tenant context (no shared memory or cache between tenants).
 - [ ] Stored artifacts (STIX bundles, AFB files, React Flow JSON) are partitioned by tenant.
 - [ ] Rate limits and token budgets are enforced per tenant independently.
@@ -304,7 +304,7 @@ Arjun manages the CTIX deployment. He's cautious because:
 **Acceptance Criteria:**
 - [ ] All log entries include: trace ID, job ID, tenant ID, timestamp, and severity.
 - [ ] Key metrics are exposed (Prometheus-compatible or structured logs): generation latency (p50/p95/p99), success/failure rate, token usage per job, queue depth, active jobs.
-- [ ] Health endpoint (`GET /health`) returns service status, current job count, and dependency connectivity (CTIX API reachable, LLM provider reachable).
+- [ ] Health endpoint (`GET /health`) returns service status, current job count, and dependency connectivity (the platform API reachable, LLM provider reachable).
 - [ ] Alerts can be configured for: generation failure rate > 10%, p95 latency > 5 minutes, queue depth > 50.
 
 ---
@@ -353,13 +353,13 @@ Arjun manages the CTIX deployment. He's cautious because:
 #### Story 5.4: AFB Import (Pre-Built Flows)
 
 **As** a CTI analyst,
-**I want** to import MITRE's pre-built attack flow files (.afb) into CTIX,
+**I want** to import MITRE's pre-built attack flow files (.afb) into the platform,
 **So that** I can use the community's existing attack flow library alongside AI-generated ones.
 
 **Acceptance Criteria:**
 - [ ] Upload `.afb` file via the UI.
 - [ ] File is parsed, converted to React Flow format, and rendered in the standard viewer.
-- [ ] Imported flows are linked to relevant reports or threat actors in CTIX.
+- [ ] Imported flows are linked to relevant reports or threat actors in the platform.
 - [ ] MITRE's 34+ published attack flows can be batch-imported.
 
 ---
@@ -372,32 +372,32 @@ Arjun manages the CTIX deployment. He's cautious because:
 |-----------|----------|------|
 | `ttp_chainer` | `/Downloads/ttp_chainer/` | AI pipeline: text → STIX + AFB (DSPy + LiteLLM, 6 parallel extractors, graph judge validation) |
 | FlowViz | `/flowviz/` | Open-source React + Express attack flow visualizer (React Flow, Dagre layout, node components) |
-| `cftr_copilot_agent` | `/Downloads/cftr_copilot_agent/` | Reference LangGraph + FastAPI agent architecture already used in CTIX |
-| CTIX v3 Connector | `/Downloads/ctix_v3_2_0_3/` | CTIX API patterns: HMAC auth, report endpoints, STIX ingestion |
+| `cftr_copilot_agent` | `/Downloads/cftr_copilot_agent/` | Reference LangGraph + FastAPI agent architecture already used in the platform |
+| Platform API connector (reference) | `/Downloads/platform_api_connector/` | HMAC auth, report endpoints, STIX ingestion patterns |
 
 ### What Gets Built
 
 | Component | Technology | Description |
 |-----------|-----------|-------------|
-| Attack Flow Agent Service | Python, FastAPI, LangGraph | Standalone microservice wrapping `ttp_chainer` with CTIX integration |
-| CTIX Backend Proxy | Django (CTIX backend) | Thin proxy layer adding auth, rate limiting, audit |
-| Attack Flow UI Module | React, TypeScript, React Flow, Dagre | New `features/attack-flow/` module in CTIX frontend |
-| CTIX API Client | Python, httpx | HMAC-authenticated client for fetching reports and storing results |
+| Attack Flow Agent Service | Python, FastAPI, LangGraph | Standalone microservice wrapping `ttp_chainer` with the platform integration |
+| the platform Backend Proxy | Django (the platform backend) | Thin proxy layer adding auth, rate limiting, audit |
+| Attack Flow UI Module | React, TypeScript, React Flow, Dagre | New `features/attack-flow/` module in the platform frontend |
+| the platform API Client | Python, httpx | HMAC-authenticated client for fetching reports and storing results |
 
 ### Architecture (Simplified)
 
 ```
 ┌────────────────┐     ┌──────────────┐     ┌───────────────────┐     ┌─────────┐
-│  CTIX Frontend  │────►│ CTIX Backend  │────►│ Attack Flow Agent │────►│   LLM   │
+│  the platform Frontend  │────►│ the platform Backend  │────►│ Attack Flow Agent │────►│   LLM   │
 │  (React)        │◄────│ (Django)      │◄────│ (FastAPI)         │◄────│ (GPT-4o)│
 │                 │     │              │     │                   │     └─────────┘
-│ Attack Flow Tab │     │ /ctixapi/    │     │ /api/v1/          │
+│ Attack Flow Tab │     │ /api/    │     │ /api/v1/          │
 │ React Flow      │     │ attack-flow/ │     │ attack-flow/      │
 │ Node Components │     │              │     │                   │
 └────────────────┘     └──────┬───────┘     └─────────┬─────────┘
                               │                       │
                        ┌──────▼───────┐        ┌──────▼──────┐
-                       │ CTIX Database │        │ ttp_chainer │
+                       │ the platform Database │        │ ttp_chainer │
                        │ (Reports,     │        │ Pipeline    │
                        │  Flows, SDOs) │        │ (DSPy)      │
                        └──────────────┘        └─────────────┘
@@ -414,16 +414,16 @@ Arjun manages the CTIX deployment. He's cautious because:
 | Story | Description | Estimate |
 |-------|-------------|----------|
 | 1.1 | Generate Attack Flow from Report (On-Demand) | 5 days |
-| 1.2 | Narrative Assembly from CTIX Report Objects | 3 days |
+| 1.2 | Narrative Assembly from the platform Report Objects | 3 days |
 | 1.3 | TLP / Marking Enforcement | 2 days |
 | 1.5 | Job Observability | 2 days |
-| 3.2 | Agent ↔ CTIX Data Exchange | 3 days |
+| 3.2 | Agent ↔ the platform Data Exchange | 3 days |
 
-**Deliverable:** FastAPI service deployed alongside CTIX, callable via internal API. Returns STIX bundle + AFB + React Flow JSON.
+**Deliverable:** FastAPI service deployed alongside the platform, callable via internal API. Returns STIX bundle + AFB + React Flow JSON.
 
 ### Phase 2: UI Integration (Weeks 4–6)
 
-**Goal:** Attack flows are visible and interactive inside CTIX.
+**Goal:** Attack flows are visible and interactive inside the platform.
 
 | Story | Description | Estimate |
 |-------|-------------|----------|
@@ -431,9 +431,9 @@ Arjun manages the CTIX deployment. He's cautious because:
 | 2.2 | Interactive Graph Visualization | 5 days |
 | 2.3 | Node Detail Panel | 3 days |
 | 2.4 | Export Attack Flow | 2 days |
-| 3.1 | CTIX Backend Proxy Layer | 2 days |
+| 3.1 | the platform Backend Proxy Layer | 2 days |
 
-**Deliverable:** Users can generate and explore attack flows entirely within the CTIX UI.
+**Deliverable:** Users can generate and explore attack flows entirely within the platform UI.
 
 ### Phase 3: Production Hardening (Weeks 7–8)
 
@@ -487,9 +487,9 @@ Arjun manages the CTIX deployment. He's cautious because:
 | LLM hallucinates techniques not in the report | Medium | Medium | Graph judge validation loop (up to 10 iterations); evidence grounding; confidence scores |
 | Long processing time frustrates users | Medium | Medium | Async job pattern with progress updates; WebSocket push on completion |
 | Large STIX bundles exceed LLM token limits | Medium | Medium | Deterministic SDO sorting + truncation with token budget |
-| React Flow bundle size impacts CTIX load time | Low | Low | Code-split the attack flow tab; lazy-load on first visit |
+| React Flow bundle size impacts the platform load time | Low | Low | Code-split the attack flow tab; lazy-load on first visit |
 | Multi-tenant data leakage via LLM context | Critical | Low | Tenant-scoped prompts; no shared LLM memory; per-tenant API credentials |
-| CTIX API rate limits block agent data fetching | Medium | Low | Internal service token with elevated rate limits; pagination for large relation sets |
+| the platform API rate limits block agent data fetching | Medium | Low | Internal service token with elevated rate limits; pagination for large relation sets |
 
 ---
 
@@ -497,13 +497,13 @@ Arjun manages the CTIX deployment. He's cautious because:
 
 | Dependency | Owner | Status |
 |------------|-------|--------|
-| CTIX backend proxy endpoints (Django) | CTIX Backend Team | Needs implementation |
-| CTIX WebSocket infrastructure (for real-time updates) | CTIX Frontend Team | Exists for other features; needs new event type |
-| CTIX report detail page tab system | CTIX Frontend Team | Exists; adding one tab |
+| the platform backend proxy endpoints (Django) | the platform Backend Team | Needs implementation |
+| the platform WebSocket infrastructure (for real-time updates) | the platform Frontend Team | Exists for other features; needs new event type |
+| the platform report detail page tab system | the platform Frontend Team | Exists; adding one tab |
 | `ttp_chainer` pipeline | CTI Platform / AI Team | Exists; needs packaging as importable module |
 | LLM API access (OpenAI / Anthropic / Ollama) | Platform Infra | Exists for other agents |
 | S3 or equivalent blob storage | Platform Infra | Exists |
-| CTIX v3 API (report + threat data endpoints) | CTIX Backend Team | Exists |
+| the platform v3 API (report + threat data endpoints) | the platform Backend Team | Exists |
 
 ---
 
@@ -513,7 +513,7 @@ Arjun manages the CTIX deployment. He's cautious because:
 |---|----------|-------------------|
 | 1 | Should event-driven generation be opt-in or opt-out per tenant? | Phase 3 start |
 | 2 | What is the maximum number of SDOs to include in narrative assembly before truncation? | Phase 1 start |
-| 3 | Should attack flows be a new STIX custom object (`x-ctix-attack-flow`) or stored as a CTIX-internal entity? | Phase 1 start |
+| 3 | Should attack flows be a new STIX custom object (`x-attack-flow`) or stored as a a platform-internal entity? | Phase 1 start |
 | 4 | Do we need to support editing attack flows in the UI (drag nodes, add/remove), or is it view-only + regenerate? | Phase 2 start |
 | 5 | What is the per-tenant LLM token budget? Flat or tiered by plan? | Phase 3 start |
 | 6 | Should exported STIX bundles include the generated attack flow objects, or just the source report's objects? | Phase 2 start |

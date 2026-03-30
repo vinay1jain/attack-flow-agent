@@ -6,7 +6,7 @@ from pydantic import BaseModel, Field
 
 
 class GenerateFlowRequest(BaseModel):
-    report_id: str = Field(..., description="CTIX report ID")
+    report_id: str = Field(..., description="Report STIX id")
     force_regenerate: bool = Field(False, description="Force regeneration even if cached")
 
 

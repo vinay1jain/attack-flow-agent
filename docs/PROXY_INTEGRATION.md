@@ -1,40 +1,40 @@
-# CTIX Backend Proxy Integration Specification
+# Backend proxy integration specification
 
-This document is the integration contract for the CTIX backend (Django) team. It describes how to implement a thin, authenticated proxy in front of the Attack Flow Agent so browser and mobile clients never talk to the agent directly.
+This document is the integration contract for the **host application** team (e.g. Django). It describes how to implement a thin, authenticated proxy in front of the Attack Flow Agent so browser and mobile clients never talk to the agent directly.
 
 ## Overview
 
-The Attack Flow Agent is a standalone FastAPI microservice. The CTIX backend should expose a **thin proxy layer** that:
+The Attack Flow Agent is a standalone FastAPI microservice. Your backend should expose a **thin proxy layer** that:
 
 1. Routes attack-flow requests to the agent over the internal network.
-2. Validates user authentication using existing CTIX HMAC (or session) auth—the same patterns used for other CTIX APIs.
+2. Validates user authentication using your existing HMAC (or session) patterns.
 3. Enforces RBAC: only principals with **read** access to the underlying report may trigger generation, poll jobs, read flows, or export.
 4. **Never** exposes the agent’s host, port, or credentials to the public internet.
 5. Forwards required tenant and user context and signs outbound calls to the agent with **service** HMAC credentials.
 
-The agent itself also validates HMAC on every request (except documentation and health). The values used by Django to sign requests to the agent **must match** the agent’s configured `CTIX_ACCESS_ID` and `CTIX_SECRET_KEY` (see [Configuration](#configuration)).
+The agent itself also validates HMAC on every request (except documentation and health). The values your backend uses to sign requests to the agent **must match** the agent’s HMAC credentials (see `agent/.env.example` and [Configuration](#configuration)).
 
-## Endpoint Mapping
+## Endpoint mapping
 
-| CTIX Backend Endpoint | Method | Agent Endpoint | Description |
+| Your public path (example) | Method | Agent endpoint | Description |
 | --- | --- | --- | --- |
-| `/ctixapi/attack-flow/generate` | `POST` | `/api/v1/attack-flow/generate` | Trigger flow generation |
-| `/ctixapi/attack-flow/jobs/{id}` | `GET` | `/api/v1/attack-flow/jobs/{id}` | Poll job status |
-| `/ctixapi/attack-flow/report/{id}` | `GET` | `/api/v1/attack-flow/report/{id}` | Get latest flow for a report |
-| `/ctixapi/attack-flow/{id}/export/{format}` | `GET` | `/api/v1/attack-flow/{id}/export/{format}` | Export flow (`stix`, `afb`, `flowviz`) |
+| `/api/attack-flow/generate` | `POST` | `/api/v1/attack-flow/generate` | Trigger flow generation |
+| `/api/attack-flow/jobs/{id}` | `GET` | `/api/v1/attack-flow/jobs/{id}` | Poll job status |
+| `/api/attack-flow/report/{id}` | `GET` | `/api/v1/attack-flow/report/{id}` | Get latest flow for a report |
+| `/api/attack-flow/{id}/export/{format}` | `GET` | `/api/v1/attack-flow/{id}/export/{format}` | Export flow (`stix`, `afb`, `flowviz`) |
 
 Path parameters:
 
 - `{id}` in **jobs** is the agent **job UUID**.
-- `{id}` in **report** is the CTIX **report STIX ID** (e.g. `report--...`).
+- `{id}` in **report** is the **report STIX ID** (e.g. `report--...`).
 - `{id}` in **export** is the agent **flow_id** (string returned inside the completed flow payload), not the report id.
 
-## Request Flow
+## Request flow
 
 ```text
-User Browser → CTIX Backend (Django) → Attack Flow Agent (FastAPI)
+User Browser → Your backend (e.g. Django) → Attack Flow Agent (FastAPI)
                     ↓
-             1. Validate CTIX user auth (HMAC / session)
+             1. Validate user auth (HMAC / session)
              2. Resolve report_id and enforce RBAC (read on report)
              3. Set X-Tenant-Id and X-User-Id from the authenticated context
              4. Append agent HMAC query params (AccessID, Expires, Signature)
@@ -46,9 +46,9 @@ User Browser → CTIX Backend (Django) → Attack Flow Agent (FastAPI)
 
 **Idempotency / caching:** If the client calls `POST .../generate` with `force_regenerate: false` and a completed flow already exists for that report, the agent may return `202` with the **existing** `job_id` and current `status` (e.g. `completed`) and a message indicating a cached result. The proxy should forward this transparently.
 
-## Headers and Query Parameters
+## Headers and query parameters
 
-### Inbound from browser (CTIX responsibility)
+### Inbound from browser (your responsibility)
 
 Define whatever JSON contract your product needs for `generate` (must match [API_REFERENCE.md](./API_REFERENCE.md): `report_id`, optional `force_regenerate`). Authenticate the user before proxying.
 
@@ -73,7 +73,7 @@ signature = base64.b64encode(
 
 Forward the **client request body** for `POST /generate` as JSON. For `GET` routes, forward query strings only if you add product-specific params; the agent does not require extra query params beyond HMAC.
 
-## RBAC Requirements
+## RBAC requirements
 
 | Operation | Report scope | Rule |
 | --- | --- | --- |
@@ -82,13 +82,13 @@ Forward the **client request body** for `POST /generate` as JSON. For `GET` rout
 | **View flow by report** | Path `report_id` | User must have **read** on that report. |
 | **Export** | Flow belongs to a report | User must have **read** on the source report. Prefer enforcing this by only exposing `flow_id` values you previously served to an authorized user, or by mapping `flow_id` → `report_id` and checking read. |
 
-The agent enforces tenant boundaries via `X-Tenant-Id`; it does **not** perform CTIX user RBAC—that remains entirely in Django.
+The agent enforces tenant boundaries via `X-Tenant-Id`; it does **not** perform end-user RBAC—that remains entirely in your backend.
 
-## Rate Limiting
+## Rate limiting
 
-The agent enforces **per-tenant** limits on `POST /api/v1/attack-flow/generate` (default: **20** requests per **3600** seconds, configurable via `RATE_LIMIT_PER_TENANT` and `RATE_LIMIT_WINDOW_SECONDS`). You may add stricter **per-user** limits in Django.
+The agent enforces **per-tenant** limits on `POST /api/v1/attack-flow/generate` (default: **20** requests per **3600** seconds, configurable via `RATE_LIMIT_PER_TENANT` and `RATE_LIMIT_WINDOW_SECONDS`). You may add stricter **per-user** limits in your app server.
 
-## Django Implementation Sketch
+## Django implementation sketch
 
 The following is illustrative—not a drop-in module. Adapt to your ASGI stack, decorators, and HTTP client.
 
@@ -143,7 +143,7 @@ Use the same `_agent_hmac_params()` and header builder for all proxied routes; o
 
 ## Configuration
 
-### CTIX backend (Django) settings
+### Host application (Django) settings
 
 ```python
 ATTACK_FLOW_AGENT_URL = env("ATTACK_FLOW_AGENT_URL", default="http://attack-flow-agent:8000")
@@ -153,20 +153,20 @@ ATTACK_FLOW_AGENT_SECRET_KEY = env("ATTACK_FLOW_AGENT_SECRET_KEY")
 
 ### Agent service (must align)
 
-On the agent, HMAC is validated against **`CTIX_ACCESS_ID`** and **`CTIX_SECRET_KEY`** (see `agent/.env.example`). In production, set these to the **same** access id and secret Django uses when calling the agent (whether you name them `ATTACK_FLOW_AGENT_*` in Django or reuse a shared service principal is an operational choice; the bytes must match).
+On the agent, HMAC is validated against the access id and secret variables in **`agent/.env.example`**. In production, set these to the **same** access id and secret your backend uses when calling the agent (whether you name them `ATTACK_FLOW_AGENT_*` in Django or reuse a shared service principal is an operational choice; the bytes must match).
 
-**Security:** If `CTIX_ACCESS_ID` is empty, the current agent build **skips** HMAC validation (intended for local dev only). Production deployments must set non-empty credentials.
+**Security:** If the agent’s access id env value is empty, the current build **skips** HMAC validation (intended for local dev only). Production deployments must set non-empty credentials.
 
-## WebSocket Integration (Progress UX)
+## WebSocket integration (progress UX)
 
 The agent does not expose a public WebSocket for job progress; clients poll `GET .../jobs/{job_id}` or use your own real-time channel. Recommended pattern:
 
 1. After a successful `POST .../generate`, the frontend opens your existing WebSocket (or SSE) channel.
-2. Django periodically polls the agent’s `GET /api/v1/attack-flow/jobs/{job_id}` (every 2–3 seconds is reasonable) using the same HMAC + headers.
+2. Your backend periodically polls the agent’s `GET /api/v1/attack-flow/jobs/{job_id}` (every 2–3 seconds is reasonable) using the same HMAC + headers.
 3. Map agent fields (`status`, `stage`, `progress_message`) into product events and push to the client.
 4. Stop polling when `status` is `completed` or `failed`, or after a maximum wait with a timeout message.
 
-Suggested event envelope for the CTIX frontend:
+Suggested event envelope for your frontend:
 
 `type`: `attack_flow.progress`
 
@@ -182,12 +182,12 @@ Suggested event envelope for the CTIX frontend:
 
 Map `message` from the agent’s `progress_message` field when present.
 
-## Operational Checklist
+## Operational checklist
 
 - [ ] Agent reachable only from VPC / private subnets (security groups, no public listener).
-- [ ] Django → agent TLS where applicable (or trusted overlay network).
+- [ ] Backend → agent TLS where applicable (or trusted overlay network).
 - [ ] HMAC secrets rotated with agent config updated in lockstep.
-- [ ] `X-Tenant-Id` always set and consistent with CTIX tenant model.
+- [ ] `X-Tenant-Id` always set and consistent with your tenant model.
 - [ ] RBAC enforced on every proxied route.
 - [ ] Logs correlate `X-User-Id`, `X-Tenant-Id`, `report_id`, and `job_id` for audits.
 

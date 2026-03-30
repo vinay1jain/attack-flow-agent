@@ -20,9 +20,9 @@ All endpoints **except** `/health` (and the documentation/OpenAPI routes) expect
 
 Newline is a single `\n` between access id and expires. `Expires` must be **greater than or equal to** server time when the request is processed.
 
-Configuration on the agent: `CTIX_ACCESS_ID`, `CTIX_SECRET_KEY`.
+Configuration on the agent: access id and secret key env vars (see `agent/.env.example`).
 
-**Development note:** If `CTIX_ACCESS_ID` is unset or empty, the agent **does not** enforce HMAC (allows unauthenticated access). Do not deploy production without setting credentials.
+**Development note:** If the access id env value is unset or empty, the agent **does not** enforce HMAC (allows unauthenticated access). Do not deploy production without setting credentials.
 
 ### Tenant header
 
@@ -30,7 +30,7 @@ All endpoints **except** `/health` and documentation require:
 
 | Header | Description |
 | --- | --- |
-| `X-Tenant-Id` | Non-empty tenant identifier (isolation, rate limits, CTIX callbacks) |
+| `X-Tenant-Id` | Non-empty tenant identifier (isolation, rate limits, upstream callbacks) |
 
 Optional:
 
@@ -42,7 +42,7 @@ Optional:
 
 ## POST /attack-flow/generate
 
-Triggers asynchronous attack-flow generation for a CTIX report.
+Triggers asynchronous attack-flow generation for a threat intelligence report.
 
 **Request body (JSON):**
 
@@ -55,7 +55,7 @@ Triggers asynchronous attack-flow generation for a CTIX report.
 
 | Field | Type | Required | Description |
 | --- | --- | --- | --- |
-| `report_id` | string | Yes | CTIX report STIX id |
+| `report_id` | string | Yes | Report STIX id |
 | `force_regenerate` | boolean | No (default `false`) | When `false`, an existing completed flow may be returned without starting a new pipeline run |
 
 **Response `202 Accepted` (new job):**
@@ -168,7 +168,7 @@ Exact keys depend on pipeline output (e.g. `stix_bundle`, `afb_data` may be pres
 
 ## GET /attack-flow/{flow_id}/export/{format}
 
-Exports a completed flow. **`flow_id`** is the identifier inside the flow `result`, **not** the CTIX `report_id`.
+Exports a completed flow. **`flow_id`** is the identifier inside the flow `result`, **not** the source `report_id`.
 
 Supported `format` values:
 
@@ -201,13 +201,13 @@ Liveness / dependency snapshot. **No authentication required.**
   "version": "1.0.0",
   "active_jobs": 2,
   "dependencies": {
-    "ctix_api": "healthy",
+    "upstream_api": "healthy",
     "llm_provider": "configured"
   }
 }
 ```
 
-- `status` is **`degraded`** when the agent cannot reach CTIX (`ctix_api`: `unreachable`).
+- `status` is **`degraded`** when the agent cannot reach the upstream platform (`upstream_api`: `unreachable`).
 - `llm_provider` is currently informational (`configured` when the process starts; not a live probe of the vendor API).
 
 ---
@@ -221,14 +221,14 @@ Many domain failures return:
 ```json
 {
   "error_code": "REPORT_NOT_FOUND",
-  "message": "The specified report was not found in CTIX.",
+  "message": "The specified report was not found in the upstream platform.",
   "details": {}
 }
 ```
 
 | `error_code` | HTTP status | Description |
 | --- | --- | --- |
-| `REPORT_NOT_FOUND` | `404` | Report id not found in CTIX |
+| `REPORT_NOT_FOUND` | `404` | Report id not found upstream |
 | `REPORT_CONTENT_INSUFFICIENT` | `422` | Not enough related objects / narrative to build a flow |
 | `TLP_RESTRICTED` | `403` | TLP policy blocks external LLM; configure local model |
 | `LLM_TIMEOUT` | `500` | LLM call exceeded timeout |
@@ -258,4 +258,4 @@ Integrations should handle both shapes.
 
 ## CORS
 
-The agent enables permissive CORS by default (`allow_origins=["*"]`). In production behind Django only, tighten or strip public CORS at the edge as needed.
+The agent enables permissive CORS by default (`allow_origins=["*"]`). In production behind your app backend only, tighten or strip public CORS at the edge as needed.

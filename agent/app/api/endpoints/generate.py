@@ -20,7 +20,7 @@ router = APIRouter()
     "/generate",
     response_model=GenerateFlowResponse,
     status_code=202,
-    summary="Generate an attack flow from a CTIX report",
+    summary="Generate an attack flow from a threat intelligence report",
 )
 async def generate_attack_flow(body: GenerateFlowRequest, request: Request) -> GenerateFlowResponse:
     tenant_id: str = request.state.tenant_id

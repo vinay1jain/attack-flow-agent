@@ -1,5 +1,5 @@
 resource "aws_ecs_cluster" "agent" {
-  name = "ctix-attack-flow-${var.environment}"
+  name = "attack-flow-agent-${var.environment}"
 
   setting {
     name  = "containerInsights"

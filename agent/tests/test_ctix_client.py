@@ -1,10 +1,10 @@
-"""Tests for CTIX API client (unit tests with mocked HTTP)."""
+"""Tests for upstream API client (unit tests with mocked HTTP)."""
 import os
 import pytest
 import httpx
 from unittest.mock import AsyncMock, patch
 
-os.environ.setdefault("CTIX_BASE_URL", "http://test-ctix.local")
+os.environ.setdefault("CTIX_BASE_URL", "http://test-platform.local")
 os.environ.setdefault("CTIX_ACCESS_ID", "test-access-id")
 os.environ.setdefault("CTIX_SECRET_KEY", "test-secret-key")
 

@@ -1,4 +1,4 @@
-"""Narrative assembly: synthesize a coherent text narrative from CTIX report data.
+"""Narrative assembly: synthesize a coherent text narrative from structured report data.
 
 Story 1.2 — When a report lacks a prose ``description``, we assemble one from
 the report's structured data (name, type, publication date, related SDOs) so

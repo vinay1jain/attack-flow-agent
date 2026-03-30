@@ -4,7 +4,7 @@ import pytest
 
 @pytest.fixture
 def sample_report() -> dict:
-    """A minimal CTIX report with description."""
+    """A minimal platform report with description."""
     return {
         "id": "report--test-001",
         "type": "report",
@@ -28,7 +28,7 @@ def sample_report() -> dict:
 
 @pytest.fixture
 def sample_report_no_description() -> dict:
-    """A CTIX report without a description field."""
+    """A platform report without a description field."""
     return {
         "id": "report--test-002",
         "type": "report",

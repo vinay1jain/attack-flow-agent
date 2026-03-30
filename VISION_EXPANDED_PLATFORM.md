@@ -5,13 +5,13 @@
 | **Type** | Vision & Brainstorm Document |
 | **Date** | 2026-03-26 |
 | **Status** | Exploratory |
-| **Relation to current plan** | Add-on / parallel track. The CTIX Attack Flow Agent (PRODUCT_STORY.md) remains unchanged and ships first. This document explores where it can grow. |
+| **Relation to current plan** | Add-on / parallel track. The Attack Flow Agent (PRODUCT_STORY.md) remains unchanged and ships first. This document explores where it can grow. |
 
 ---
 
 ## The Core Insight
 
-The current plan generates attack flows from **threat intelligence reports** inside CTIX. But the underlying problem — "I have cybersecurity data and I need to understand the story, see the flow, and take action" — is **not limited to reports**.
+The current plan generates attack flows from **threat intelligence reports** inside the platform. But the underlying problem — "I have cybersecurity data and I need to understand the story, see the flow, and take action" — is **not limited to reports**.
 
 Every cybersecurity artifact tells a partial story:
 
@@ -98,7 +98,7 @@ This is where the LLM's world knowledge of ATT&CK, threat actor behaviors, and m
 | **Upload** | Upload PDF, DOCX, TXT, STIX JSON, AFB, PCAP summary, sandbox JSON |
 | **URL** | Provide a URL to a threat report, advisory, or blog post |
 | **API Push** | Other tools (SIEM, SOAR, EDR) push data to the platform via API |
-| **Pull from CTIX** | Select a report, incident, or object collection from CTIX |
+| **Pull from the platform** | Select a report, incident, or object collection from the platform |
 | **Pull from CFTR** | Import an incident with its evidence from CFTR |
 | **Pull from SIEM** | Connect to Splunk/QRadar/Sentinel, pull alert clusters |
 | **Email Forward** | Forward a phishing email or advisory to a dedicated inbox |
@@ -178,7 +178,7 @@ This is where the platform becomes **operational**, not just analytical. Every n
 │                                                          │
 │  HUNT                                                    │
 │  ├── Search for this technique in logs → [Splunk query]  │
-│  ├── Search for these IOCs → [CTIX lookup]               │
+│  ├── Search for these IOCs → [the platform lookup]               │
 │  ├── Scan endpoints → [CrowdStrike RTR] [Defender Live]  │
 │  └── Query email gateway → [O365] [Google Workspace]     │
 │                                                          │
@@ -189,7 +189,7 @@ This is where the platform becomes **operational**, not just analytical. Every n
 
 | Category | What it does | Integrations |
 |----------|-------------|-------------|
-| **Understand** | Enrich context for the node: ATT&CK details, threat intel, past incidents | MITRE ATT&CK, CTIX, VirusTotal, Shodan, CTI feeds |
+| **Understand** | Enrich context for the node: ATT&CK details, threat intel, past incidents | MITRE ATT&CK, the platform, VirusTotal, Shodan, CTI feeds |
 | **Detect** | Generate or deploy detection rules targeting this technique | Sigma → Splunk/QRadar/Sentinel; YARA → EDR; Suricata → NDR |
 | **Mitigate** | Show recommended mitigations, configurations, and controls | MITRE mitigations, NIST CSF, CIS Benchmarks, vendor hardening guides |
 | **Respond** | Take direct containment/remediation actions | SOAR (CSOL, XSOAR), EDR (CrowdStrike, Defender), Email (Proofpoint), IAM (Okta, AD) |
@@ -198,7 +198,7 @@ This is where the platform becomes **operational**, not just analytical. Every n
 
 ### The integration model: Connectors
 
-Each "action" button maps to a **connector** — the same concept CTIX and CSOL already use:
+Each "action" button maps to a **connector** — the same concept the platform and CSOL already use:
 
 ```
 ┌──────────────────────────────────────────────────────────────────┐
@@ -232,7 +232,7 @@ Each "action" button maps to a **connector** — the same concept CTIX and CSOL 
 └──────────────────────────────────────────────────────────────────┘
 ```
 
-This is not greenfield — CTIX and CSOL already have 200+ connectors. The platform reuses them, just surfaces them **in the context of a flow node** rather than a standalone action.
+This is not greenfield — the platform and CSOL already have 200+ connectors. The platform reuses them, just surfaces them **in the context of a flow node** rather than a standalone action.
 
 ---
 
@@ -246,7 +246,7 @@ This is not greenfield — CTIX and CSOL already have 200+ connectors. The platf
 | **FlowViz** | AI-generated flows from URLs/text | Single prompt, no actions, no integrations, browser-only storage |
 | **SIEM (Splunk, etc.)** | Alert correlation, dashboards | No attack flow visualization, no technique-level view |
 | **SOAR (XSOAR, CSOL)** | Playbook automation | Playbooks are pre-built, not generated from intel; no visual flow |
-| **TIP (CTIX, MISP, ThreatConnect)** | Intel aggregation and sharing | Has objects and relationships, but no sequential flow view |
+| **TIP (the platform, MISP, ThreatConnect)** | Intel aggregation and sharing | Has objects and relationships, but no sequential flow view |
 | **Mandiant Advantage** | Threat intel with ATT&CK mapping | Static technique heatmaps, not interactive ordered flows |
 | **AttackIQ / SafeBreach** | Breach and attack simulation | Tests known techniques, doesn't analyze your specific incidents |
 
@@ -317,7 +317,7 @@ Raj (Detection Engineer):
 
 ```
 Maya (CTI Analyst):
-1. Selects all reports tagged "APT28" from CTIX (12 reports over 2 years)
+1. Selects all reports tagged "APT28" from the platform (12 reports over 2 years)
 2. Platform generates a composite threat actor playbook — a master flow 
    combining all observed behaviors
 3. Nodes are weighted by frequency: "Spear Phishing" appears in 11/12 
@@ -332,7 +332,7 @@ Maya (CTI Analyst):
 ```
 Raj (Detection Engineer):
 1. Pastes 30 IOCs from an ISAC sharing (IPs, domains, hashes)
-2. Platform enriches each IOC (via CTIX, VirusTotal, Shodan)
+2. Platform enriches each IOC (via the platform, VirusTotal, Shodan)
 3. AI infers relationships: "These 5 IPs are Cobalt Strike C2 servers. 
    These 3 hashes are Cobalt Strike beacons. This domain was used for 
    phishing delivery. Connected threat actor: FIN7."
@@ -350,7 +350,7 @@ Raj (Detection Engineer):
                     CURRENT PLAN                          EXPANDED PLATFORM
                     ────────────                          ─────────────────
                     
-                    CTIX Report                           ANY INPUT
+                    the platform Report                           ANY INPUT
                          │                                     │
                          ▼                                     ▼
                     ┌─────────────┐                    ┌──────────────────┐
@@ -390,15 +390,15 @@ Raj (Detection Engineer):
 
 **The current plan is the foundation.** It builds:
 - The flow generation engine (ttp_chainer + LangGraph agent)
-- The visualization canvas (React Flow in CTIX)
-- The CTIX integration layer (API, storage, auth)
+- The visualization canvas (React Flow in the platform)
+- The the platform integration layer (API, storage, auth)
 
 **The expanded platform adds:**
 - More input types (incidents, IOCs, alerts, vulns, free text)
 - More flow models (incident timeline, kill chain map, detection coverage)
 - The action layer (tool integrations from every node)
 - Collaboration and overlay features
-- Standalone deployment option (not just inside CTIX)
+- Standalone deployment option (not just inside the platform)
 
 ---
 
@@ -482,7 +482,7 @@ Attack flows are intelligence. They should be shareable:
 
 ## Product Positioning
 
-### If this were a standalone product (not just a CTIX feature)
+### If this were a standalone product (not just a the platform feature)
 
 **Name ideas** (brainstorm, not final):
 - **FlowOps** — Cybersecurity flows, operationalized
@@ -503,22 +503,22 @@ Attack flows are intelligence. They should be shareable:
 
 | Aspect | Current Plan (PRODUCT_STORY.md) | Expanded Platform (this doc) |
 |--------|--------------------------------|------------------------------|
-| **Scope** | CTIX feature: Attack Flow tab on report pages | Standalone platform + CTIX integration |
-| **Input** | CTIX report objects only | Any cybersecurity input |
+| **Scope** | the platform feature: Attack Flow tab on report pages | Standalone platform + the platform integration |
+| **Input** | the platform report objects only | Any cybersecurity input |
 | **Output** | Attack flow visualization + export | Flows + actions + integrations + analytics |
 | **AI Engine** | ttp_chainer (report → attack flow) | Multiple engines: reports, incidents, IOCs, vulns |
 | **Action** | View and export only | Detect, mitigate, respond, hunt from every node |
-| **Deployment** | Microservice inside CTIX | Standalone SaaS + CTIX embedded + on-prem |
+| **Deployment** | Microservice inside the platform | Standalone SaaS + the platform embedded + on-prem |
 | **Timeline** | Phase 1–3 (8 weeks) | Current plan ships first; expanded features layer on over 6–12 months |
 
-**The current plan is Phase 1 of the bigger platform.** Nothing changes about what we're building now. The expanded vision is a roadmap for where it goes after the CTIX integration proves the core value.
+**The current plan is Phase 1 of the bigger platform.** Nothing changes about what we're building now. The expanded vision is a roadmap for where it goes after the platform integration proves the core value.
 
 ### Phased evolution
 
 ```
 Phase 1 (Current Plan - Weeks 1-8):
-  ✅ Attack flows from CTIX reports
-  ✅ React Flow visualization in CTIX
+  ✅ Attack flows from the platform reports
+  ✅ React Flow visualization in the platform
   ✅ Export (STIX, AFB, PNG)
 
 Phase 2 (Weeks 9-14):
@@ -553,9 +553,9 @@ Phase 5 (Weeks 31+):
 
 | # | Question | Impact |
 |---|----------|--------|
-| 1 | Should this be a CTIX feature, a standalone Cyware product, or both? | Product strategy, pricing, engineering investment |
+| 1 | Should this be a the platform feature, a standalone Cyware product, or both? | Product strategy, pricing, engineering investment |
 | 2 | How do we handle the inference gap — IOC → flow requires much more AI reasoning than report → flow? | Model capability, accuracy, cost |
-| 3 | For the action layer, do we build our own connectors or reuse CSOL/CTIX connectors? | Engineering effort, time to market |
+| 3 | For the action layer, do we build our own connectors or reuse CSOL or platform connectors? | Engineering effort, time to market |
 | 4 | Is real-time streaming mode technically feasible with current LLM latency? | Architecture, user expectations |
 | 5 | How do we price the LLM usage — per-flow, per-tenant flat, or metered? | Business model |
 | 6 | Should the detection coverage overlay query security tools live, or use cached state? | Performance, integration complexity |
@@ -568,7 +568,7 @@ Phase 5 (Weeks 31+):
 
 ## Summary: What This Adds to the Current Plan
 
-The current plan (PRODUCT_STORY.md) is a **strong, shippable first step**: attack flows from CTIX reports, visualized with React Flow, exportable as STIX/AFB.
+The current plan (PRODUCT_STORY.md) is a **strong, shippable first step**: attack flows from the platform reports, visualized with React Flow, exportable as STIX/AFB.
 
 This document adds the **long-term vision** of where that foundation grows into:
 
@@ -576,6 +576,6 @@ This document adds the **long-term vision** of where that foundation grows into:
 2. **Actionable nodes** — every node is a launchpad for mitigations, detection rules, response actions, and threat hunting
 3. **Tool integration** — connected to the entire security stack via connectors
 4. **Intelligence analytics** — cross-flow insights, coverage scoring, actor profiling
-5. **Multiple deployment modes** — CTIX feature, standalone product, or embedded in any Cyware product
+5. **Multiple deployment modes** — the platform feature, standalone product, or embedded in any Cyware product
 
 The vision is: **one canvas where you go from "what happened?" to "what do I do about it?" in minutes, not hours**.

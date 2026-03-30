@@ -37,7 +37,7 @@ def create_app() -> FastAPI:
     settings = get_settings()
 
     app = FastAPI(
-        title="CTIX Attack Flow Agent",
+        title="Attack Flow Agent",
         description="AI-powered attack flow generation from threat intelligence reports",
         version="1.0.0",
         lifespan=lifespan,

@@ -1,5 +1,5 @@
 /**
- * Phase 2 stub — Attack Flow tab for the CTIX report detail page.
+ * Phase 2 stub — Attack Flow tab for an embedded report detail page.
  * Will contain the FlowGraph, NodeDetailPanel, and ExportMenu.
  */
 import { useState } from 'react';

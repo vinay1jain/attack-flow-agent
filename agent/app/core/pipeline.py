@@ -49,13 +49,13 @@ class PipelineState(TypedDict, total=False):
 
 
 async def fetch_report(state: PipelineState) -> PipelineState:
-    """Fetch the report from CTIX."""
+    """Fetch the report from the upstream platform."""
     job_mgr = get_job_manager()
     await job_mgr.update_status(
         state["job_id"],
         JobStatus.PROCESSING,
         stage=JobStage.FETCHING_REPORT,
-        progress_message="Fetching report data from CTIX",
+        progress_message="Fetching report data from upstream API",
     )
 
     try:
@@ -204,7 +204,7 @@ async def convert_output(state: PipelineState) -> PipelineState:
 
 
 async def store_results(state: PipelineState) -> PipelineState:
-    """Store results in CTIX and update the job."""
+    """Store results in the upstream platform and update the job."""
     job_mgr = get_job_manager()
     await job_mgr.update_status(
         state["job_id"],

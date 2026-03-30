@@ -1,6 +1,6 @@
 """Convert STIX bundle + ttp_chainer extracted data into React Flow JSON.
 
-The output format matches what FlowViz (and the CTIX frontend) expects:
+The output format matches what FlowViz-style UIs expect:
 ``{ nodes: [{ id, type, data, position }], edges: [{ id, source, target, label }] }``
 """
 

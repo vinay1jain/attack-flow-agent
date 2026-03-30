@@ -8,7 +8,7 @@ resource "aws_security_group" "alb" {
     to_port         = 80
     protocol        = "tcp"
     security_groups = [var.ctix_security_group_id]
-    description     = "HTTP from CTIX backend"
+    description     = "HTTP from application backend"
   }
 
   egress {
@@ -37,6 +37,6 @@ resource "aws_security_group" "agent" {
     to_port     = 0
     protocol    = "-1"
     cidr_blocks = ["0.0.0.0/0"]
-    description = "All outbound (LLM APIs, CTIX)"
+    description = "All outbound (LLM APIs, upstream API)"
   }
 }
