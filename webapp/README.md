@@ -2,6 +2,8 @@
 
 Upload threat intelligence reports (STIX 2.1 JSON or PDF), visualize interactive attack flows, and generate detection rules (Sigma, YARA, Suricata).
 
+**Repository overview:** see the root **[`README.md`](../README.md)** for how this folder fits next to `agent/`, `docs/`, and infra.
+
 **API keys:** This app does not ship with any provider credentials. Each operator sets **`OPENAI_API_KEY`** (or another LiteLLM-supported key) on the **backend** only—never in the frontend bundle or in git.
 
 ## Architecture

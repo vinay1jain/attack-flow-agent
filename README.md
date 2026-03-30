@@ -1,54 +1,110 @@
 # Attack Flow Agent
 
-AI-powered attack flow generation from threat intelligence reports: MITRE ATT&CK–aware flows, STIX-oriented exports, and React Flow–style graphs for analysis and visualization.
+**Turn threat intelligence into MITRE ATT&CK–aware attack flows** — STIX-friendly exports, interactive graphs (React Flow), and optional detection-rule generation. Ships as a **FastAPI agent service**, a **standalone browser app** (`webapp/`), and Terraform/CloudFormation examples for cloud deploys.
 
-## Try the standalone web app (v1)
+**You bring your own LLM API keys.** Nothing is hardcoded; never commit `.env` or put secrets in `VITE_*` frontend variables.
 
-For a **browser-only demo** (upload STIX/PDF, visualize flows, generate detection rules), use **[`webapp/`](webapp/README.md)**. **You supply your own LLM API key** via server environment variables (`OPENAI_API_KEY` in `webapp/backend/.env` or your cloud secret store). Nothing is hardcoded in the repo, and **do not** put keys in `VITE_*` frontend variables—they would be exposed to anyone who loads the site.
+---
 
-## What it does
+## Start here
 
-The service ingests threat intelligence **reports** (via API integration or the standalone uploader) and, at a high level:
+| I want to… | Go to |
+| --- | --- |
+| **Try the app locally** (upload STIX/PDF, explore the graph, export, rules) | **[`webapp/README.md`](webapp/README.md)** — primary quick start |
+| **Run or integrate the HTTP agent** (jobs, HMAC, upstream report fetch) | This file → [Quick start (agent)](#quick-start-agent) and **[`docs/API_REFERENCE.md`](docs/API_REFERENCE.md)** |
+| **Put a proxy in front of the agent** (browser → your backend → agent) | **[`docs/PROXY_INTEGRATION.md`](docs/PROXY_INTEGRATION.md)** |
+| **Deploy on AWS** (Fargate, ALB, S3, CloudFront) | **[`webapp/AWS_DEPLOY.md`](webapp/AWS_DEPLOY.md)** and **[`webapp/infra/cloudformation/README.md`](webapp/infra/cloudformation/README.md)** |
+| **Deploy frontend to Netlify** | **[`webapp/NETLIFY.md`](webapp/NETLIFY.md)** |
 
-1. Fetches report and related intelligence objects when connected to an upstream platform.
-2. Assembles a narrative from structured data when prose is thin.
-3. Runs the `ttp_chainer` pipeline (DSPy / LLM) to extract techniques, tools, and chains.
-4. Produces STIX 2.1 bundles, MITRE AFB-oriented JSON, and graph data for React Flow–style UIs.
-5. Persists results and can notify upstream systems via configured callbacks (see integration code).
+---
 
-## Architecture
+## Table of contents
+
+- [Features](#features)
+- [Repository layout](#repository-layout)
+- [Quick start (standalone web app)](#quick-start-standalone-web-app)
+- [Quick start (agent)](#quick-start-agent)
+- [API summary](#api-summary)
+- [Configuration](#configuration)
+- [Documentation index](#documentation-index)
+- [Security & secrets](#security--secrets)
+- [Deployment notes](#deployment-notes)
+- [License](#license)
+
+---
+
+## Features
+
+- **Attack flow graph** — Techniques, tools, and relationships as an explorable flow (React Flow + Dagre layout in the webapp).
+- **Inputs** — STIX 2.1 bundles, PDF reports (webapp), or report IDs via the agent API when integrated with an upstream platform.
+- **Exports** — STIX bundle, MITRE AFB-oriented JSON, flow graph JSON, PNG; analyst-oriented rule packs where implemented.
+- **Detection rules (webapp)** — LLM-assisted generation (Sigma, YARA, Suricata, and extended formats per UI); **backend-only** API keys.
+- **Agent API** — Async jobs, tenant header, HMAC auth, rate limits, health with dependency hints.
+
+---
+
+## Repository layout
 
 ```text
-Client UI → Backend proxy (your app) → Attack Flow Agent (FastAPI) → LLM / local model
-                                              ↓
-                                ttp_chainer (DSPy) + LangGraph pipeline
+attack-flow-agent/
+├── webapp/                 ← Start here for the v1 demo (README inside)
+│   ├── backend/            FastAPI + ttp_chainer adapter
+│   ├── frontend/           Vite + React + MUI + React Flow
+│   ├── AWS_DEPLOY.md       AWS options + CloudFormation pointer
+│   └── infra/cloudformation/
+├── agent/                  FastAPI microservice (integration-style API)
+├── docs/                   PROXY_INTEGRATION.md, API_REFERENCE.md
+├── frontend/               Embedded React feature module (scaffold)
+├── infra/terraform/      ECS / ALB / ECR patterns
+├── docker-compose.yml
+└── README.md               ← You are here
 ```
 
-For integrated deployments, implement a thin authenticated proxy as in [docs/PROXY_INTEGRATION.md](docs/PROXY_INTEGRATION.md). End users and browsers should **not** call the agent directly in production.
+---
 
-## Quick start
+## Quick start (standalone web app)
+
+Full steps, env vars, and deploy options are in **[`webapp/README.md`](webapp/README.md)**.
+
+```bash
+# Backend (from repo root)
+cd webapp/backend
+cp .env.example .env
+# Set OPENAI_API_KEY, TTP_CHAINER_PATH (see .env.example)
+pip install -r requirements.txt
+python -m uvicorn app.main:app --reload --host 127.0.0.1 --port 8000
+
+# Frontend (separate terminal)
+cd webapp/frontend
+npm install && npm run dev
+# Open http://localhost:5173 — API proxied to :8000
+```
+
+---
+
+## Quick start (agent)
+
+For the **integration agent** (not the standalone webapp UI):
 
 ### Prerequisites
 
 - Python **3.11+**
-- An LLM provider (OpenAI, Anthropic, or local Ollama) configured for LiteLLM
-- Optional: an existing threat-intel deployment for full API integration (see `agent/.env.example`)
+- LLM access via LiteLLM (see `agent/.env.example`)
+- Optional: upstream threat-intel API credentials if you use the bundled HTTP client
 
 ### Setup
 
 ```bash
 cd attack-flow-agent
 cp agent/.env.example agent/.env
-# Edit agent/.env: platform URL / HMAC fields if integrating, LLM keys, TTP_CHAINER_PATH
+# Edit agent/.env: LLM keys, optional upstream URL/HMAC, TTP_CHAINER_PATH
 
 cd agent
 pip install -r requirements.txt
-# or: pip install -e ".[dev]"   if using pyproject editable install
+# or: pip install -e ".[dev]"
 
 uvicorn app.main:app --reload --host 0.0.0.0 --port 8000
 ```
-
-Ensure `PYTHONPATH` includes the `agent` package root when running `uvicorn` from `agent/` (as above, `app.main:app`).
 
 ### Docker
 
@@ -57,17 +113,17 @@ docker compose up -d
 docker compose logs -f agent
 ```
 
-Compose mounts `./agent` and loads `agent/.env`.
-
 ### Verify
 
 ```bash
 curl -s http://localhost:8000/api/v1/health | jq .
 ```
 
-Authenticated routes need `X-Tenant-Id` and HMAC query params; see [docs/API_REFERENCE.md](docs/API_REFERENCE.md).
+Authenticated routes require `X-Tenant-Id` and HMAC query parameters — see **[`docs/API_REFERENCE.md`](docs/API_REFERENCE.md)**.
 
-## API endpoints
+---
+
+## API summary
 
 | Method | Path | Description |
 | --- | --- | --- |
@@ -75,80 +131,57 @@ Authenticated routes need `X-Tenant-Id` and HMAC query params; see [docs/API_REF
 | `GET` | `/api/v1/attack-flow/jobs/{id}` | Job status and result |
 | `GET` | `/api/v1/attack-flow/report/{id}` | Latest flow for a report |
 | `GET` | `/api/v1/attack-flow/{flow_id}/export/{fmt}` | Export `stix`, `afb`, or `flowviz` |
-| `GET` | `/api/v1/health` | Health check (no auth) |
+| `GET` | `/api/v1/health` | Health (no auth) |
 
-Full schemas, errors, and auth: [docs/API_REFERENCE.md](docs/API_REFERENCE.md).
+Details, errors, and schemas: **[`docs/API_REFERENCE.md`](docs/API_REFERENCE.md)**.
 
-## Project structure
-
-```text
-attack-flow-agent/
-├── webapp/                     # Standalone UI + API (v1 demo; BYOK for LLM)
-├── agent/                      # FastAPI service
-│   ├── app/
-│   │   ├── main.py             # App factory, middleware, exception handlers
-│   │   ├── config.py           # pydantic-settings
-│   │   ├── api/                # Routes, middleware, schemas
-│   │   ├── core/               # Pipeline, narrative, TLP, jobs, errors
-│   │   ├── integrations/       # Upstream API client, ttp_chainer adapter
-│   │   └── models/             # Jobs, flow domain types
-│   ├── tests/
-│   ├── Dockerfile
-│   ├── requirements.txt
-│   └── pyproject.toml
-├── frontend/                   # React module (feature scaffolding)
-│   └── src/features/attack-flow/
-├── infra/                      # Terraform (e.g. AWS ECS Fargate)
-├── docs/                       # Proxy spec, API reference
-└── docker-compose.yml
-```
+---
 
 ## Configuration
 
-Environment variables are documented in [agent/.env.example](agent/.env.example). Important groups:
+Environment templates (no secrets committed):
 
-| Variable | Description | Default (typical) |
-| --- | --- | --- |
-| `LLM_MODEL` | LiteLLM model id for main reasoning | `openai/gpt-4o` |
-| `LLM_EXTRACTION_MODEL` | Lighter model for extraction-style steps | `openai/gpt-4o-mini` |
-| `LLM_LOCAL_MODEL` | Local model for strict TLP (e.g. TLP:RED) | `ollama/llama3` |
-| `*_BASE_URL`, `*_ACCESS_ID`, `*_SECRET_KEY`, `*_VERIFY_SSL` | Optional upstream API + HMAC (see `.env.example` names) | required when integrating |
-| `RATE_LIMIT_PER_TENANT` | Max `generate` calls per tenant per window | `20` |
-| `RATE_LIMIT_WINDOW_SECONDS` | Window length in seconds | `3600` |
-| `NARRATIVE_TOKEN_BUDGET` / `NARRATIVE_MIN_SDOS` | Narrative assembly limits | see `.env.example` |
-| `TTP_CHAINER_PATH` | Filesystem path to ttp_chainer | `/app/ttp_chainer` |
-| `AGENT_HOST` / `AGENT_PORT` / `AGENT_LOG_LEVEL` | Bind and logging | `0.0.0.0`, `8000`, `INFO` |
+| File | Purpose |
+| --- | --- |
+| [`agent/.env.example`](agent/.env.example) | Agent service, LLM, optional upstream API |
+| [`webapp/backend/.env.example`](webapp/backend/.env.example) | Standalone web API + CORS + models |
 
-## Deployment
+Variable meanings are documented in comments inside each `*.env.example` file.
+
+---
+
+## Documentation index
+
+| Document | Contents |
+| --- | --- |
+| **[`webapp/README.md`](webapp/README.md)** | Standalone app: local dev, Fly.io, Docker, Netlify pointer |
+| **[`docs/API_REFERENCE.md`](docs/API_REFERENCE.md)** | REST API, auth, errors |
+| **[`docs/PROXY_INTEGRATION.md`](docs/PROXY_INTEGRATION.md)** | How to proxy the agent from your backend |
+| **[`webapp/AWS_DEPLOY.md`](webapp/AWS_DEPLOY.md)** | AWS deployment patterns |
+| **[`webapp/infra/cloudformation/README.md`](webapp/infra/cloudformation/README.md)** | Fargate + CloudFormation walkthrough |
+| **[`webapp/NETLIFY.md`](webapp/NETLIFY.md)** | Static frontend + API redirect |
+| **[`PRODUCT_STORY.md`](PRODUCT_STORY.md)** / **[`VISION_EXPANDED_PLATFORM.md`](VISION_EXPANDED_PLATFORM.md)** | Product context and roadmap-style notes |
+
+---
+
+## Security & secrets
+
+- **Never commit** `.env`, real API keys, or `*.tfvars` with secrets.
+- **Never use** `VITE_*` for LLM or upstream credentials (they ship to the browser).
+- Prefer **Secrets Manager** / **host env** in production; see `webapp/AWS_DEPLOY.md`.
+- Report security issues through your organization’s process (add `SECURITY.md` if you adopt a public disclosure policy).
+
+---
+
+## Deployment notes
 
 - **Development:** `docker compose` or local `uvicorn` as above.
-- **Production:** See [infra/](infra/) for Terraform targeting AWS ECS Fargate; run the agent in the same trust zone as your application servers, with no public ingress to the agent port.
+- **Production agent:** See [`infra/terraform/`](infra/terraform/) — run beside your app tier; no public agent port without a proxy.
+- **Production webapp:** See [`webapp/AWS_DEPLOY.md`](webapp/AWS_DEPLOY.md) and CloudFormation README.
 
-## Documentation
+Releases are tagged (e.g. **`v1.0.0`**). Use **GitHub Releases** for changelog-style notes if you want discoverability for each tag.
 
-- [docs/PROXY_INTEGRATION.md](docs/PROXY_INTEGRATION.md) — Backend proxy contract.
-- [docs/API_REFERENCE.md](docs/API_REFERENCE.md) — Agent HTTP API.
-
-## Publishing on GitHub
-
-The project is meant to ship **without secrets**: only `*.env.example` files, never committed `.env` or real API keys. Before the first push, skim `git status` and avoid adding `*.tfvars` with real values.
-
-**First push (after `git` is initialized in this folder):**
-
-1. On GitHub: **New repository** → choose a name (e.g. `attack-flow-agent`). Do **not** add a README, `.gitignore`, or license if this tree already contains them.
-2. Add the remote and push `main` and the **`v1.0.0`** tag:
-
-```bash
-cd /path/to/attack-flow-agent
-git remote add origin https://github.com/<YOUR_USER_OR_ORG>/<REPO_NAME>.git
-git branch -M main
-git push -u origin main
-git push origin v1.0.0
-```
-
-Use SSH instead if you prefer: `git@github.com:<YOUR_USER_OR_ORG>/<REPO_NAME>.git`. GitHub will prompt for sign-in (browser, PAT, or SSH key) depending on your setup.
-
-On GitHub, **Releases → Draft a new release** from tag `v1.0.0` if you want release notes for others trying the webapp.
+---
 
 ## License
 
