@@ -17,11 +17,21 @@ interface Props {
 export default function ExportBar({ data }: Props) {
   const [anchor, setAnchor] = useState<HTMLElement | null>(null);
   const [rulesDialogOpen, setRulesDialogOpen] = useState(false);
+  const openRulesDialog = () => {
+    setAnchor(null);
+    setRulesDialogOpen(true);
+  };
 
   const handleExportPng = async () => {
     setAnchor(null);
     const el = document.querySelector('.react-flow') as HTMLElement;
     if (!el) return;
+    // Ensure the whole graph is visible before capture (not just current viewport).
+    const fitBtn = document.querySelector('.react-flow__controls-fitview') as HTMLButtonElement | null;
+    if (fitBtn && !fitBtn.disabled) {
+      fitBtn.click();
+      await new Promise((r) => setTimeout(r, 180));
+    }
     const dataUrl = await toPng(el, { backgroundColor: '#0d1117', pixelRatio: 2 });
     saveAs(dataUrl, 'attack-flow.png');
   };
@@ -70,10 +80,10 @@ export default function ExportBar({ data }: Props) {
         size="small"
         variant="contained"
         startIcon={<ShieldIcon />}
-        onClick={() => { setAnchor(null); setRulesDialogOpen(true); }}
+        onClick={openRulesDialog}
         sx={{ background: 'linear-gradient(135deg, #6366f1, #8b5cf6)' }}
       >
-        Detection rules (ZIP)
+        Central rules (ZIP)
       </Button>
       <RulesBulkDialog open={rulesDialogOpen} onClose={() => setRulesDialogOpen(false)} data={data} />
       <Menu
@@ -90,6 +100,10 @@ export default function ExportBar({ data }: Props) {
         <MenuItem onClick={handleExportFlowJson}>
           <ListItemIcon><AccountTreeIcon fontSize="small" /></ListItemIcon>
           <ListItemText primary="Attack flow (JSON)" secondary="React Flow nodes and edges" />
+        </MenuItem>
+        <MenuItem onClick={openRulesDialog}>
+          <ListItemIcon><ShieldIcon fontSize="small" /></ListItemIcon>
+          <ListItemText primary="Detection rules (analysis ZIP)" secondary="Choose technologies before generating" />
         </MenuItem>
         {data.stix_bundle && (
           <MenuItem onClick={handleExportStix}>

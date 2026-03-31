@@ -74,6 +74,12 @@ npm run dev
 
 The Vite dev server proxies `/api/*` to `localhost:8000` automatically.
 
+Rule export workflow: in the flow view, open **Export -> Detection rules (analysis ZIP)** to
+choose technologies (Sigma/Splunk/EQL/etc.) and an output mode:
+- `Per-node ZIP (legacy)` — one file per selected node per technology.
+- `Combined per technology` — one synthesized output per technology.
+- `Merged per technology file` — one file per technology with per-node sections.
+
 ## API Endpoints
 
 | Method | Path | Description |

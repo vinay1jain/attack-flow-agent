@@ -1,4 +1,4 @@
-import { useState, useCallback, useRef, useEffect } from 'react';
+import { useState, useCallback, useRef } from 'react';
 import {
   Box, Typography, Button, Paper, LinearProgress, Alert, Chip, Stack,
   Tabs, Tab, TextField,
@@ -8,7 +8,7 @@ import SecurityIcon from '@mui/icons-material/Security';
 import DescriptionIcon from '@mui/icons-material/Description';
 import ContentPasteIcon from '@mui/icons-material/ContentPaste';
 import type { AnalyzeResponse, UploadResponse } from '../types';
-import { uploadFile, analyzeText, fetchHealth } from '../services/api';
+import { uploadFile, analyzeText } from '../services/api';
 
 interface Props {
   onUploadComplete: (data: UploadResponse) => void;
@@ -29,29 +29,6 @@ export default function UploadView({
   const [tab, setTab] = useState(0);
   const [pastedText, setPastedText] = useState('');
   const fileRef = useRef<HTMLInputElement>(null);
-  const [runtime, setRuntime] = useState<{
-    llm_ready: boolean;
-    llm_model: string;
-    extraction_model: string;
-  } | null>(null);
-
-  useEffect(() => {
-    let cancelled = false;
-    fetchHealth()
-      .then((h) => {
-        if (!cancelled) {
-          setRuntime({
-            llm_ready: h.llm_ready,
-            llm_model: h.llm_model,
-            extraction_model: h.extraction_model,
-          });
-        }
-      })
-      .catch(() => {
-        if (!cancelled) setRuntime(null);
-      });
-    return () => { cancelled = true; };
-  }, []);
 
   const handleFile = useCallback(async (file: File) => {
     onError(null);
@@ -254,33 +231,6 @@ export default function UploadView({
         <Alert severity="error" sx={{ mt: 3, maxWidth: 600, width: '100%' }}>{error}</Alert>
       )}
 
-      {runtime && (
-        <Paper variant="outlined" sx={{ mt: 3, maxWidth: 600, width: '100%', p: 2 }}>
-          <Typography variant="subtitle2" gutterBottom>LLM configuration (server)</Typography>
-          {runtime.llm_ready ? (
-            <Stack spacing={0.5}>
-              <Typography variant="body2" color="success.main">
-                API key is configured on the server (value is never sent to the browser).
-              </Typography>
-              <Typography variant="caption" color="text.secondary" component="div">
-                Primary model: <strong>{runtime.llm_model || '—'}</strong>
-                {' · '}
-                Extraction model: <strong>{runtime.extraction_model || '—'}</strong>
-              </Typography>
-            </Stack>
-          ) : (
-            <Alert severity="warning" sx={{ mt: 0 }}>
-              No <code>OPENAI_API_KEY</code> on the server (or it is empty). Set it in{' '}
-              <code>webapp/backend/.env</code> and restart the API. Analysis and detection rules will fail until then.
-            </Alert>
-          )}
-          <Typography variant="caption" color="text.secondary" sx={{ display: 'block', mt: 1.5 }}>
-            Do not put API keys in frontend <code>.env</code> with a <code>VITE_</code> prefix — they would be
-            exposed to anyone who opens the site. Per-user keys in the UI are possible but require a dedicated
-            secure flow (e.g. header sent over HTTPS, never logged).
-          </Typography>
-        </Paper>
-      )}
     </Box>
   );
 }

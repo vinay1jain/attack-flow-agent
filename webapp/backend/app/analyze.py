@@ -7,9 +7,11 @@ from the agent package).
 from __future__ import annotations
 
 import json
+import os
 import re
 import sys
 import uuid
+from pathlib import Path
 from typing import Any
 
 import structlog
@@ -17,6 +19,16 @@ import structlog
 from .config import get_settings
 
 logger = structlog.get_logger(__name__)
+
+
+def _debug_enabled() -> bool:
+    v = (os.getenv("ANALYZE_DEBUG") or "").strip().lower()
+    return v in {"1", "true", "yes", "on"}
+
+
+def _debug(event: str, **kwargs: Any) -> None:
+    if _debug_enabled():
+        logger.info(f"analyze.debug.{event}", **kwargs)
 
 # ---------------------------------------------------------------------------
 # STIX → React Flow type mapping (from agent/app/models/stix.py)
@@ -347,17 +359,37 @@ def _patch_pydantic_get() -> None:
 
 
 def _ensure_ttp_chainer_on_path() -> None:
-    """Add the ttp_chainer directory to sys.path if not already present."""
+    """Add and validate the ttp_chainer directory before imports."""
     settings = get_settings()
-    path = settings.ttp_chainer_path
-    if not path:
+    raw_path = (settings.ttp_chainer_path or "").strip()
+    if not raw_path:
         raise RuntimeError(
             "TTP_CHAINER_PATH is not configured. "
             "Set it in .env or as an environment variable."
         )
+    path = str(Path(raw_path).expanduser().resolve())
     if path not in sys.path:
         sys.path.insert(0, path)
         logger.info("analyze.ttp_chainer_path_added", path=path)
+    _debug("ttp_path_checked", path=path)
+
+    # Validate expected modules so the failure is actionable for operators.
+    required_modules = ("aaftre", "stix_object_creator", "stix_2_afb")
+    missing: list[str] = []
+    for module_name in required_modules:
+        module_file = Path(path) / f"{module_name}.py"
+        module_pkg_init = Path(path) / module_name / "__init__.py"
+        if not module_file.exists() and not module_pkg_init.exists():
+            missing.append(module_name)
+
+    if missing:
+        raise RuntimeError(
+            "Invalid TTP_CHAINER_PATH. Could not find required modules "
+            f"{', '.join(missing)} under: {path}. "
+            "Point TTP_CHAINER_PATH at the ttp_chainer source directory that contains "
+            "aaftre.py, stix_object_creator.py, and stix_2_afb.py."
+        )
+    _debug("ttp_modules_present", modules="aaftre,stix_object_creator,stix_2_afb")
 
 
 def _setup_dspy() -> None:
@@ -777,56 +809,91 @@ def run_analysis(text: str) -> dict[str, Any]:
     Returns a dict with keys: nodes, edges, stix_bundle, afb_data, stats.
     """
     _patch_pydantic_get()
-    _ensure_ttp_chainer_on_path()
-    _setup_dspy()
+    _debug("run_start", text_chars=len(text))
 
-    import aaftre
-    import stix_object_creator
-    from stix_2_afb import StixToAfbConverter
+    # ttp_chainer is preferred, but the app should degrade gracefully when it is
+    # not present so users can still get a minimal graph from the LLM fallback.
+    ttp_ready = True
+    stix_object_creator = None
+    StixToAfbConverter = None
+    try:
+        _ensure_ttp_chainer_on_path()
+        _setup_dspy()
+        import aaftre  # type: ignore
+        import stix_object_creator as _stix_object_creator  # type: ignore
+        from stix_2_afb import StixToAfbConverter as _StixToAfbConverter  # type: ignore
+
+        stix_object_creator = _stix_object_creator
+        StixToAfbConverter = _StixToAfbConverter
+        _debug("ttp_ready", enabled=True)
+    except Exception as exc:
+        ttp_ready = False
+        logger.warning("analyze.ttp_chainer_unavailable", error=str(exc))
+        _debug("ttp_ready", enabled=False, reason=str(exc))
 
     logger.info("analyze.pipeline_start", text_chars=len(text))
 
-    # Step 1: Extract TTPs from the report text
-    extracted_data = aaftre.main(text)
-    logger.info(
-        "analyze.extraction_complete",
-        keys=list(extracted_data.keys()) if isinstance(extracted_data, dict) else "non-dict",
-    )
-
-    # Step 2: Build React Flow graph directly from extracted data
-    flow = _extracted_data_to_react_flow(extracted_data)
+    extracted_data: dict[str, Any] = {}
     fallback_used: str | None = None
 
-    if not flow["nodes"]:
-        flow = _fallback_graph_from_ttp_flow(extracted_data)
-        if flow["nodes"]:
-            fallback_used = "ttp_flow_chain"
+    if ttp_ready:
+        # Step 1: Extract TTPs from the report text
+        extracted_data = aaftre.main(text)
+        logger.info(
+            "analyze.extraction_complete",
+            keys=list(extracted_data.keys()) if isinstance(extracted_data, dict) else "non-dict",
+        )
+        _debug(
+            "extraction_summary",
+            has_attack_actions=bool(extracted_data.get("attack_actions")) if isinstance(extracted_data, dict) else False,
+            has_ttp_flow=bool(extracted_data.get("ttp_flow")) if isinstance(extracted_data, dict) else False,
+            stix_objects=len(extracted_data.get("stix_objects", [])) if isinstance(extracted_data, dict) else 0,
+        )
+
+        # Step 2: Build React Flow graph directly from extracted data
+        flow = _extracted_data_to_react_flow(extracted_data)
+
+        if not flow["nodes"]:
+            flow = _fallback_graph_from_ttp_flow(extracted_data)
+            if flow["nodes"]:
+                fallback_used = "ttp_flow_chain"
+                _debug("fallback_used", mode=fallback_used, nodes=len(flow["nodes"]), edges=len(flow["edges"]))
+    else:
+        flow = {"nodes": [], "edges": []}
+        fallback_used = "ttp_chainer_unavailable"
+        _debug("fallback_used", mode=fallback_used)
 
     if not flow["nodes"]:
         flow = _fallback_graph_from_llm(text)
         if flow["nodes"]:
             fallback_used = "llm_minigraph"
+            _debug("fallback_used", mode=fallback_used, nodes=len(flow["nodes"]), edges=len(flow["edges"]))
 
     # Step 3: Try to create STIX bundle (best-effort, for export only)
     stix_bundle: dict[str, Any] | None = None
-    try:
-        stix_bundle_obj = stix_object_creator.create_stix_bundle(extracted_data)
-        stix_bundle = _serialize_stix_bundle(stix_bundle_obj)
-        logger.info("analyze.stix_bundle_created", objects=len(stix_bundle.get("objects", [])))
-    except Exception as exc:
-        logger.warning("analyze.stix_bundle_failed", error=str(exc))
+    if ttp_ready and stix_object_creator is not None:
+        try:
+            stix_bundle_obj = stix_object_creator.create_stix_bundle(extracted_data)
+            stix_bundle = _serialize_stix_bundle(stix_bundle_obj)
+            logger.info("analyze.stix_bundle_created", objects=len(stix_bundle.get("objects", [])))
+            _debug("stix_created", objects=len(stix_bundle.get("objects", [])))
+        except Exception as exc:
+            logger.warning("analyze.stix_bundle_failed", error=str(exc))
+            _debug("stix_failed", error=str(exc))
 
     # Step 4: Try to create AFB format (best-effort, for export only)
     afb_data: dict[str, Any] | None = None
     try:
-        if stix_bundle:
+        if stix_bundle and ttp_ready and StixToAfbConverter is not None:
             layout_data = extracted_data.get("node_layout", {}) if isinstance(extracted_data, dict) else {}
             converter = StixToAfbConverter()
             afb_result = converter.convert_stix_to_afb(stix_bundle_obj, layout_data)
             afb_data = _to_plain_dict(afb_result)
             logger.info("analyze.afb_created")
+            _debug("afb_created", has_afb=bool(afb_data))
     except Exception as exc:
         logger.warning("analyze.afb_failed", error=str(exc))
+        _debug("afb_failed", error=str(exc))
 
     technique_count = sum(
         1 for n in flow["nodes"] if n.get("data", {}).get("technique_id")
@@ -841,6 +908,7 @@ def run_analysis(text: str) -> dict[str, Any]:
         stats["fallback"] = fallback_used
 
     logger.info("analyze.pipeline_complete", **stats)
+    _debug("run_complete", **stats)
 
     return {
         "nodes": flow["nodes"],

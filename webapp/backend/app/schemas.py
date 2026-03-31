@@ -81,6 +81,12 @@ RuleOutputFormat = Literal[
     "suricata",
 ]
 
+RuleOutputMode = Literal[
+    "per_node_zip",
+    "combined_per_technology",
+    "merged_per_technology_file",
+]
+
 
 class RuleRequest(BaseModel):
     technique_name: str
@@ -128,6 +134,14 @@ class DetectionRule(BaseModel):
 
 class BulkRuleRequest(BaseModel):
     techniques: list[RuleRequest]
+    rule_output_mode: RuleOutputMode = Field(
+        default="per_node_zip",
+        description=(
+            "Bulk packaging mode: per_node_zip (legacy), combined_per_technology "
+            "(single synthesized output per technology), or merged_per_technology_file "
+            "(one file per technology with per-node sections)."
+        ),
+    )
 
 
 class HealthResponse(BaseModel):

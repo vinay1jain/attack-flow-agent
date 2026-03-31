@@ -108,6 +108,16 @@ ZIP_FOLDER_EXT: dict[str, tuple[str, str]] = {
     "suricata": ("suricata", ".rules"),
 }
 
+COMBINED_STRICT_SUPPORTED = frozenset({
+    "splunk_spl",
+    "elastic_eql",
+    "elastic_kql",
+    "microsoft_sentinel_kql",
+    "crowdstrike_fql",
+    "chronicle_yaral",
+    "qradar_aql",
+})
+
 
 def normalize_output_formats(formats: list[str] | None) -> list[str]:
     if not formats:
@@ -308,20 +318,100 @@ async def generate_bulk_rules(
 
 def package_rules_zip(rules: list[dict[str, Any]]) -> bytes:
     """ZIP: per-platform folders + analyst_pack markdown per item."""
+    return package_rules_zip_with_mode(rules, rule_output_mode="per_node_zip")
+
+
+def _sanitize_base_name(i: int, rule: dict[str, Any]) -> str:
+    raw_tid = rule.get("technique_id") or "custom"
+    tid = str(raw_tid).replace(".", "_").replace("/", "_")[:32]
+    name = str(rule["technique_name"]).replace(" ", "_").replace("/", "_")[:40]
+    return f"{i + 1:02d}_{tid}_{name}"[:80]
+
+
+def _merge_per_technology_file(fmt: str, rules: list[dict[str, Any]]) -> str:
+    chunks: list[str] = []
+    for i, rule in enumerate(rules, start=1):
+        body = rule.get(fmt)
+        if not (isinstance(body, str) and body.strip()):
+            continue
+        title = f"### {i:02d}. {rule.get('technique_name', 'item')} ({rule.get('technique_id', 'custom')})"
+        chunks.append(f"{title}\n\n{body.strip()}")
+    return "\n\n".join(chunks).strip()
+
+
+def _combined_per_technology(fmt: str, rules: list[dict[str, Any]]) -> tuple[str | None, str | None]:
+    """Return (body, warning). Warning is set when we degrade from strict-combined to merged."""
+    if fmt not in COMBINED_STRICT_SUPPORTED:
+        merged = _merge_per_technology_file(fmt, rules)
+        if not merged:
+            return None, None
+        return merged, f"{fmt}: strict combined mode not supported; used merged per-node sections."
+
+    # Strict-combined formats: produce one synthesized body with a combined header and OR-like sections.
+    snippets: list[str] = []
+    for rule in rules:
+        body = rule.get(fmt)
+        if isinstance(body, str) and body.strip():
+            snippets.append(body.strip())
+    if not snippets:
+        return None, None
+    header = (
+        f"# Combined detection for {fmt}\n"
+        "# Auto-composed from multiple selected nodes in one analysis.\n"
+        "# Review and tune before production deployment.\n"
+    )
+    return f"{header}\n" + "\n\n".join(snippets), None
+
+
+def package_rules_zip_with_mode(
+    rules: list[dict[str, Any]],
+    rule_output_mode: str = "per_node_zip",
+) -> bytes:
+    """ZIP packager for per-node, combined-per-tech, and merged-per-tech modes."""
     buf = io.BytesIO()
+    warnings: list[str] = []
+    mode_used = rule_output_mode
     with zipfile.ZipFile(buf, "w", zipfile.ZIP_DEFLATED) as zf:
         for i, rule in enumerate(rules):
-            raw_tid = rule.get("technique_id") or "custom"
-            tid = str(raw_tid).replace(".", "_").replace("/", "_")[:32]
-            name = str(rule["technique_name"]).replace(" ", "_").replace("/", "_")[:40]
-            base = f"{i + 1:02d}_{tid}_{name}"[:80]
+            base = _sanitize_base_name(i, rule)
 
             zf.writestr(f"analyst_pack/{base}.md", _analyst_pack_markdown(rule))
 
+        if rule_output_mode == "per_node_zip":
+            for i, rule in enumerate(rules):
+                base = _sanitize_base_name(i, rule)
+                for fmt, (folder, ext) in ZIP_FOLDER_EXT.items():
+                    body = rule.get(fmt)
+                    if isinstance(body, str) and body.strip():
+                        zf.writestr(f"{folder}/{base}{ext}", body)
+        elif rule_output_mode == "merged_per_technology_file":
             for fmt, (folder, ext) in ZIP_FOLDER_EXT.items():
-                body = rule.get(fmt)
-                if isinstance(body, str) and body.strip():
-                    zf.writestr(f"{folder}/{base}{ext}", body)
+                merged = _merge_per_technology_file(fmt, rules)
+                if merged:
+                    zf.writestr(f"{folder}/all-selected{ext}", merged)
+        elif rule_output_mode == "combined_per_technology":
+            for fmt, (folder, ext) in ZIP_FOLDER_EXT.items():
+                combined, warning = _combined_per_technology(fmt, rules)
+                if warning:
+                    warnings.append(warning)
+                if combined:
+                    zf.writestr(f"{folder}/combined{ext}", combined)
+            if warnings:
+                mode_used = "combined_per_technology_with_fallbacks"
+        else:
+            mode_used = "per_node_zip"
+            warnings.append(f"Unknown mode '{rule_output_mode}', defaulted to per_node_zip.")
+            for i, rule in enumerate(rules):
+                base = _sanitize_base_name(i, rule)
+                for fmt, (folder, ext) in ZIP_FOLDER_EXT.items():
+                    body = rule.get(fmt)
+                    if isinstance(body, str) and body.strip():
+                        zf.writestr(f"{folder}/{base}{ext}", body)
+
+        included_formats: list[str] = []
+        for fmt in ZIP_FOLDER_EXT:
+            if any(isinstance(r.get(fmt), str) and r.get(fmt, "").strip() for r in rules):
+                included_formats.append(fmt)
 
         index_lines = [
             "# Detection rules pack (behavioral, multi-platform)",
@@ -329,11 +419,17 @@ def package_rules_zip(rules: list[dict[str, Any]]) -> bytes:
             "Each row has: `analyst_pack/*.md` (MITRE, data sources, FPs, deployment guide) "
             "and vendor folders for selected formats.",
             "",
+            f"Requested mode: {rule_output_mode}",
+            f"Mode used: {mode_used}",
             f"Total items: {len(rules)}",
+            f"Technologies included: {', '.join(included_formats) if included_formats else 'none'}",
             "",
         ]
         for rule in rules:
             index_lines.append(f"- {rule['technique_id']}: {rule['technique_name']}")
+        if warnings:
+            index_lines.extend(["", "## Warnings"])
+            index_lines.extend([f"- {w}" for w in warnings])
         zf.writestr("README.md", "\n".join(index_lines))
 
     return buf.getvalue()

@@ -2,6 +2,7 @@ import type {
   AnalyzeResponse,
   DetectionRules,
   RuleBulkItem,
+  RuleOutputMode,
   RuleOutputFormat,
   UploadResponse,
 } from '../types';
@@ -84,11 +85,14 @@ export async function generateRules(params: {
   return res.json();
 }
 
-export async function downloadBulkRules(techniques: RuleBulkItem[]): Promise<Blob> {
+export async function downloadBulkRules(
+  techniques: RuleBulkItem[],
+  rule_output_mode: RuleOutputMode = 'per_node_zip',
+): Promise<Blob> {
   const res = await fetch(`${API}/rules/bulk`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ techniques }),
+    body: JSON.stringify({ techniques, rule_output_mode }),
   });
   if (!res.ok) throw new Error('Bulk rule generation failed');
   return res.blob();

@@ -5,7 +5,7 @@ import {
   InputLabel, Stack, Alert, CircularProgress, Divider, Chip,
 } from '@mui/material';
 import { saveAs } from 'file-saver';
-import type { AnalyzeResponse, RuleBulkItem, RuleFocus, RuleOutputFormat } from '../types';
+import type { AnalyzeResponse, RuleBulkItem, RuleFocus, RuleOutputFormat, RuleOutputMode } from '../types';
 import { downloadBulkRules } from '../services/api';
 import { focusFromNodeType } from '../utils/ruleFocus';
 import {
@@ -39,6 +39,7 @@ export default function RulesBulkDialog({ open, onClose, data }: Props) {
   const [outputFormats, setOutputFormats] = useState<Set<RuleOutputFormat>>(
     () => new Set(DEFAULT_OUTPUT_FORMATS),
   );
+  const [ruleOutputMode, setRuleOutputMode] = useState<RuleOutputMode>('per_node_zip');
 
   const eligibleNodes = useMemo(
     () => data.nodes.filter((n) => !isOperatorType(n.type)),
@@ -56,6 +57,7 @@ export default function RulesBulkDialog({ open, onClose, data }: Props) {
     setCustomRows([]);
     setError(null);
     setOutputFormats(new Set(DEFAULT_OUTPUT_FORMATS));
+    setRuleOutputMode('per_node_zip');
   }, [open, eligibleNodes]);
 
   const toggleFormat = (id: RuleOutputFormat) => {
@@ -141,6 +143,7 @@ export default function RulesBulkDialog({ open, onClose, data }: Props) {
     }
     return items;
   }, [eligibleNodes, selectedIds, customRows, outputFormats]);
+  const hasAnySelection = selectedIds.size > 0 || customRows.some((r) => r.name.trim().length > 0);
 
   const handleGenerate = async () => {
     const payload = buildPayload();
@@ -155,8 +158,8 @@ export default function RulesBulkDialog({ open, onClose, data }: Props) {
     setLoading(true);
     setError(null);
     try {
-      const blob = await downloadBulkRules(payload);
-      saveAs(blob, 'detection-rules.zip');
+      const blob = await downloadBulkRules(payload, ruleOutputMode);
+      saveAs(blob, `detection-rules-analysis-${ruleOutputMode}.zip`);
       onClose();
     } catch {
       setError('Bulk generation failed. Check the API and try again.');
@@ -166,16 +169,18 @@ export default function RulesBulkDialog({ open, onClose, data }: Props) {
 
   return (
     <Dialog open={open} onClose={loading ? undefined : onClose} maxWidth="sm" fullWidth>
-      <DialogTitle>Detection rules (ZIP)</DialogTitle>
+      <DialogTitle>Detection rules (analysis ZIP)</DialogTitle>
       <DialogContent dividers>
         <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
-          Choose graph nodes to include. Use a custom row for a tool or entity that is not on the graph.
-          Focus for each graph node follows its type (e.g. tool vs technique).
+          Generate a central detection pack for this analysis. Select the nodes to include and choose
+          which technologies should be generated for every selected node.
         </Typography>
 
-        <Typography variant="subtitle2" sx={{ mb: 0.5 }}>Technologies (ZIP contents)</Typography>
+        <Typography variant="subtitle2" sx={{ mb: 0.5 }}>Technologies to include</Typography>
         <Typography variant="caption" color="text.secondary" sx={{ display: 'block', mb: 1 }}>
-          Same formats for every selected node. ZIP includes an <code>analyst_pack/</code> markdown file per item (MITRE, data sources, FPs, deployment guide) plus vendor folders.
+          The same technologies are applied across selected nodes. The ZIP includes an
+          <code>analyst_pack/</code> markdown file per item (MITRE mapping, data sources, false-positive tuning,
+          implementation guide) plus vendor folders.
         </Typography>
         {(() => {
           const byGroup = optionsByGroup();
@@ -207,6 +212,24 @@ export default function RulesBulkDialog({ open, onClose, data }: Props) {
             </Box>
           );
         })()}
+        <FormControl fullWidth size="small" sx={{ mb: 2 }}>
+          <InputLabel id="bulk-rule-output-mode-label">Output mode</InputLabel>
+          <Select
+            labelId="bulk-rule-output-mode-label"
+            value={ruleOutputMode}
+            label="Output mode"
+            onChange={(e) => setRuleOutputMode(e.target.value as RuleOutputMode)}
+          >
+            <MenuItem value="per_node_zip">Per-node ZIP (legacy)</MenuItem>
+            <MenuItem value="combined_per_technology">Combined per technology (single synthesized output)</MenuItem>
+            <MenuItem value="merged_per_technology_file">Merged per technology file (per-node sections)</MenuItem>
+          </Select>
+        </FormControl>
+        <Typography variant="caption" color="text.secondary" sx={{ display: 'block', mb: 2 }}>
+          <strong>Per-node ZIP:</strong> one file per node per technology.{' '}
+          <strong>Combined per technology:</strong> one synthesized output per selected technology.{' '}
+          <strong>Merged per technology file:</strong> one file per technology with per-node blocks.
+        </Typography>
 
         <Stack direction="row" spacing={1} flexWrap="wrap" useFlexGap sx={{ mb: 2 }}>
           <Button size="small" variant="outlined" onClick={selectAll}>Select all</Button>
@@ -284,10 +307,10 @@ export default function RulesBulkDialog({ open, onClose, data }: Props) {
         <Button
           variant="contained"
           onClick={handleGenerate}
-          disabled={loading || outputFormats.size === 0}
+          disabled={loading || outputFormats.size === 0 || !hasAnySelection}
           startIcon={loading ? <CircularProgress size={16} /> : undefined}
         >
-          {loading ? 'Generating…' : 'Generate & download ZIP'}
+          {loading ? 'Generating…' : 'Generate analysis ZIP'}
         </Button>
       </DialogActions>
     </Dialog>

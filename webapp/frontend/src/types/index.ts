@@ -53,6 +53,11 @@ export type RuleOutputFormat =
   | 'yara'
   | 'suricata';
 
+export type RuleOutputMode =
+  | 'per_node_zip'
+  | 'combined_per_technology'
+  | 'merged_per_technology_file';
+
 export interface DetectionRules {
   technique_id: string;
   technique_name: string;

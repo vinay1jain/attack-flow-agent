@@ -15,7 +15,7 @@ from fastapi.responses import Response
 from .analyze import run_analysis
 from .graph_connectivity import validate_attack_flow_connectivity
 from .config import get_settings
-from .rules import generate_bulk_rules, generate_rules, package_rules_zip
+from .rules import generate_bulk_rules, generate_rules, package_rules_zip_with_mode
 from .schemas import (
     AnalyzeRequest,
     AnalyzeResponse,
@@ -166,12 +166,12 @@ async def bulk_generate_rules(request: BulkRuleRequest):
     """Generate rules for all techniques and return as ZIP."""
     techniques = [t.model_dump() for t in request.techniques]
     rules = await generate_bulk_rules(techniques)
-    zip_bytes = package_rules_zip(rules)
+    zip_bytes = package_rules_zip_with_mode(rules, request.rule_output_mode)
 
     return Response(
         content=zip_bytes,
         media_type="application/zip",
-        headers={"Content-Disposition": "attachment; filename=detection-rules.zip"},
+        headers={"Content-Disposition": f"attachment; filename=detection-rules-analysis-{request.rule_output_mode}.zip"},
     )
 
 
